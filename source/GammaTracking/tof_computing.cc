@@ -19,7 +19,6 @@ namespace gt {
 
   double tof_computing::get_t_th(double energy_, double mass_, double track_length_)
   {
-    // return track_length / ( tof_computing::beta(energy,mass) * tof_computing::kC );
     return track_length_ / (tof_computing::beta(energy_, mass_) * CLHEP::c_light);
   }
 
@@ -41,13 +40,13 @@ namespace gt {
   }
 
   double tof_computing::get_chi2(const event::calorimeter_hit & hit1_,
-                                  const event::calorimeter_hit & hit2_)
+                                 const event::calorimeter_hit & hit2_)
   {
     const double sigma_exp = pow(hit1_.sigma_time,2) + pow(hit2_.sigma_time,2);
     return pow(tof_computing::get_dt(hit1_, hit2_),2)/sigma_exp;
   }
 
-  double tof_computing::get_proba(double chi2_, size_t ndf_)
+  double tof_computing::get_internal_probability(double chi2_, size_t ndf_)
   {
     return gsl_cdf_chisq_Q(chi2_, ndf_);
   }

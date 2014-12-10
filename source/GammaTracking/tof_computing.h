@@ -21,9 +21,11 @@ namespace gt {
 
     static double get_dt(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);
 
+    /// Compute X² value between two calorimeter hits
     static double get_chi2(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);
 
-    static double get_proba(double chi2_, size_t ndf_ = 1);
+    /// Return the internal probability given the X² value
+    static double get_internal_probability(double chi2_, size_t ndf_ = 1);
   };
 
 }

@@ -154,7 +154,6 @@ namespace snemo {
        * Check calibrated data *
        *************************/
 
-      bool abort_at_missing_input = true;
       // Check if some 'calibrated_data' are available in the data model:
       if (data_record_.has(_CD_label_)) {
         // Get the 'calibrated_data' entry from the data model :
@@ -170,8 +169,6 @@ namespace snemo {
       /*********************************
        * Check particle track data     *
        *********************************/
-      const bool abort_at_former_output = false;
-      const bool preserve_former_output = false;
       snemo::datamodel::particle_track_data * ptr_particle_track_data = 0;
       if (! data_record_.has(_PTD_label_)) {
         ptr_particle_track_data

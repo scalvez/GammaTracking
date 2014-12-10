@@ -100,7 +100,7 @@ namespace snemo {
       std::string _CD_label_;                        //!< The label of the input/output  data bank
       std::string _PTD_label_;                       //!< The label of the input/output  data bank
 
-      boost::scoped_ptr<::snemo::reconstruction::gamma_tracking_driver> _driver_; //!< Handle to the embedded fitter algorithm with dynamic memory auto-deletion
+      boost::scoped_ptr< ::snemo::reconstruction::gamma_tracking_driver> _driver_; //!< Handle to the embedded fitter algorithm with dynamic memory auto-deletion
 
       // Macro to automate the registration of the module :
       DPP_MODULE_REGISTRATION_INTERFACE (gamma_tracking_module);
