@@ -104,7 +104,8 @@ int main()
     // gt.set_absolute(true);
     // Replace Combine par process
     gt.process();
-    const std::list<std::list<int>> gamma_tracked_coll = gt.get_reflects(1e-5);
+    gt::gamma_tracking::solution_type gamma_tracked_coll;
+    gt.get_reflects(1e-5, gamma_tracked_coll);
     gt.print();
     // gt.count();
     std::cout << "Number of gammas found = " << gamma_tracked_coll.size() << std::endl;

@@ -37,22 +37,10 @@ namespace gt {
   public:
 
     /// collection of integer, ref for "reference of PM"
-    typedef std::list <int> ref_t;
-
-    /// collection of integer iterator, ref for "reference of PM"
-    typedef std::list <int>::iterator ref_it;
-
-    /// const collection of integer iterator, ref for "reference of PM"
-    typedef std::list <int>::const_iterator ref_const_it;
+    typedef std::list<int> list_type;
 
     /// 2D collection of integer, ref for "reference of PM"
-    typedef std::list<std::list <int> > refcoll_t;
-
-    /// 2D collection of integer iterator, ref for "reference of PM"
-    typedef std::list<std::list <int> >::iterator refcoll_it;
-
-    /// 2D const collection of integer iterator, ref for "reference of PM"
-    typedef std::list<std::list <int> >::const_iterator refcoll_const_it;
+    typedef std::list<list_type> solution_type;
 
   public:
 
@@ -101,20 +89,20 @@ namespace gt {
     /// cout information about current gamma tracking (old)
     void print();
 
-    /// Counter of the current gamma tracking (old)
-    void count();
+    /// Check if an element of gamma_tracking::list_type values_ is in serie collection type
+    bool is_inside_serie(const list_type & values_) const;
 
-    /// check if an element of gamma_tracking::ref_t values_ is in gamma_tracking::ref_t check_
-    bool is_inside(const std::list <int>& check_, const std::list <int>& values_);
+    /// Check if an element of gamma_tracking::list_type values_ is in gamma_tracking::list_type check_
+    bool is_inside(const list_type & check_, const list_type & values_) const;
 
-    /// check if value_ is in gamma_tracking::ref_t check_
-    bool is_inside(const ref_t& check_, int value_);
+    /// Check if value_ is in gamma_tracking::list_type check_
+    bool is_inside(const list_type & check_, int value_) const;
 
-    /// erase elements of gamma_tracking::ref_t values_ is in gamma_tracking::ref_t check_
-    void extract(std::list <int>& source_, const std::list <int>& values_);
+    /// erase elements of gamma_tracking::list_type values_ is in gamma_tracking::list_type check_
+    void extract(list_type & source_, const list_type & values_);
 
-    /// to_ become a unique elements ref_t of from_+to_
-    void put_inside(const std::list<int> &from_, std::list<int> &to_);
+    /// to_ become a unique elements list_type of from_+to_
+    void put_inside(const list_type & from_, list_type & to_);
 
     /// if true, only by prob, else by size and then by prob.
     void set_absolute(bool a_);
@@ -132,9 +120,9 @@ namespace gt {
     void set_prob_min(double min_prob_);
 
     /*!<
-      \param starts_ is the post start ref_t. After calculation, the function
+      \param starts_ is the post start list_type. After calculation, the function
       will return only gamma tracked starting with starts_.
-      \param exclude_ is the ref_t to exclude from the calculations, and so, from the final result.
+      \param exclude_ is the list_type to exclude from the calculations, and so, from the final result.
       \param deathless_starts_ means that the starts can be used in all gt.
       Usefull if starts represents vertexes instead of PM numbers.
 
@@ -150,29 +138,31 @@ namespace gt {
 
     */
     /// Return the results
-    refcoll_t get_reflects(double prob_, const ref_t* starts_ = NULL,
-                           const ref_t *exclude_ = NULL, bool deathless_starts_ = false);
+    void get_reflects(double prob_, solution_type & solution_,
+                      const list_type * starts_ = 0,
+                      const list_type * exclude_ = 0,
+                      bool deathless_starts_ = false);
 
     /// Return all calculated combination.\sa gamma_tracking::process
-    const refcoll_t get_all(); //removed the &
+    const solution_type & get_all() const;
+
+    /// Get the proba for a gamma tracked
+    double get_prob(const list_type & scin_ids_) const;
 
     /// Get the proba between two ref
     double get_prob(int scin_id1_, int scin_id2_) const;
 
-    /// Get the proba for a gamma tracked
-    double get_prob(const ref_t &scin_ids_) const;
+    /// Get the chi square for a gamma tracked
+    double get_chi2(const list_type & scin_ids_) const;
 
     /// Get the chi square between two ref
-    double get_chi2(int scin_id1_, int scin_id2_);
+    double get_chi2(int scin_id1_, int scin_id2_) const;
 
-    /// Get the chi square for a gamma tracked
-    double get_chi2(ref_t &scin_ids_);
+    /// Classify the two list_type in order of size and proba. Depend on _absolute_
+    static bool sort_reflect(const list_type & ref1_, const list_type & ref2_);
 
-    /// Classify the two ref_t in order of size and proba. Depend on _absolute_
-    static bool sort_reflect(ref_t &ref1_, ref_t &ref2_);
-
-    /// Classify a 2D ref_t in order of size and proba. Depend on _absolute_
-    void sort_prob(std::list<std::list <int> > &list_);
+    /// Classify a 2D list_type in order of size and proba. Depend on _absolute_
+    void sort_prob(solution_type & solution_);
 
     /// Get the chi square limit of _min_prob_ depend on degree of freedom
     double get_chi_limit(unsigned int);
@@ -189,7 +179,7 @@ namespace gt {
     void reset() ;
 
     /// Tool to calculate each factorial only once
-    static long factorial(int x);
+    static unsigned long factorial(size_t x);
 
     /* /\* interface i_serializable *\/ */
     /* virtual const std::string & get_serial_tag () const{}     */
@@ -200,6 +190,10 @@ namespace gt {
     /* 			const std::string & title_  = "", */
     /* 			const std::string & indent_ = "", */
     /* 			bool inherit_               = false) const{} */
+  protected:
+
+    /// Set default attribute value
+    void _set_defaults();
 
   private:
 
@@ -222,22 +216,22 @@ namespace gt {
     double _min_prob_;
 
     /// start collections (pre and post)
-    ref_t _starts_;
+    list_type _starts_;
 
     /// The full gamma tracked combinaisons
-    refcoll_t _serie_;
+    solution_type _serie_;
 
     /// dictionnary of chi squares : deg of freedom: size-1 VS the chi2
     std::map<int,double> _min_chi2_;
 
     /// Dictionnary of chi square based on gamma tracked pointer
-    std::map<const std::list<int>* ,double> _chi2_;
+    std::map<const list_type* ,double> _chi2_;
 
     /// Dictionnary of probabilities based on gamma tracked pointer
-    std::map<const std::list<int>* ,double> _proba_;
+    std::map<const list_type* ,double> _proba_;
 
     /// Factorial kept
-    static std::map<long, double> _fact_;
+    static std::map<unsigned long, double> _fact_;
 
 
 
