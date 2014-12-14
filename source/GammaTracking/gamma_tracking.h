@@ -1,5 +1,5 @@
-#ifndef __N3AnaBase__gamma_tracking_h
-#define __N3AnaBase__gamma_tracking_h 1
+#ifndef GT_GAMMA_TRACKING_H
+#define GT_GAMMA_TRACKING_H 1
 
 // Standard library:
 #include <map>
@@ -265,5 +265,12 @@ namespace gt {
   };
 }
 
+#endif // GT_GAMMA_TRACKING_H
 
-#endif
+/*
+** Local Variables: --
+** mode: c++ --
+** c-file-style: "gnu" --
+** tab-width: 2 --
+** End: --
+*/
