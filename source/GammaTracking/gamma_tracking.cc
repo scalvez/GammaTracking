@@ -399,7 +399,7 @@ namespace gt {
       solution_type::iterator it1 = _serie_.begin();
       solution_type::iterator it2 = _serie_.begin();
       it2++;
-      while (it2 != solution_.end() && !has_changed) {
+      while (it2 != _serie_.end() && !has_changed) {
         if (it1->size() > 1 && it2->size() > 1 &&
             _proba_[&(*it1)] < _proba_[&(*it2)] &&
             (is_absolute() || it1->size() <= it2->size())) {
