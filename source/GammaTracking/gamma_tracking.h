@@ -1,12 +1,22 @@
-#include <map>
-#include <list>
-#include <cstddef>
-#include <datatools/properties.h>
-
 #ifndef __N3AnaBase__gamma_tracking_h
 #define __N3AnaBase__gamma_tracking_h 1
 
+// Standard library:
+#include <map>
+#include <list>
+#include <cstddef>
+
+// Third party:
+// - Bayeux/datatools:
+#include <datatools/logger.h>
+
+namespace datatools {
+  class properties;
+}
+
 namespace gt {
+
+  class event;
 
   //! Implementation of the gamma tracking and combinator
   /*!
@@ -23,12 +33,13 @@ namespace gt {
    * The most standard usage is :\n
 
    gamma_tracking gt;
-   gt.AddProb (PM1, PM2, prob1);
-   gt.AddProb (PM2, PM3, prob2);
-   gt.AddProb (PM1, PM3, prob3);
+   gt.add_prob(PM1, PM2, prob1);
+   gt.add_prob(PM2, PM3, prob2);
+   gt.add_prob(PM1, PM3, prob3);
    [...]
-   gt.process ();
-   refcoll_t gamma_tracked_coll=gt.get_reflects (lowest_prob);
+   gt.process();
+   solution_type gamma_tracked_coll;
+   gt.get_reflects(lowest_prob, gamma_tracked_coll);
 
    *
    */
@@ -166,6 +177,9 @@ namespace gt {
 
     /// Get the chi square limit of _min_prob_ depend on degree of freedom
     double get_chi_limit(unsigned int);
+
+    /// Prepare process by computing the internal probability of all calorimeter pairs
+    void prepare_process(const event & event_) ;
 
     /// Main calculation before the gamma_tracking::get_reflects
     void process() ;

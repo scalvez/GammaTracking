@@ -62,8 +62,8 @@ namespace snemo {
 
     // Initialization :
     void gamma_tracking_module::initialize(const datatools::properties  & setup_,
-                                                     datatools::service_manager   & service_manager_,
-                                                     dpp::module_handle_dict_type & /* module_dict_ */)
+                                           datatools::service_manager   & service_manager_,
+                                           dpp::module_handle_dict_type & /* module_dict_ */)
     {
       DT_THROW_IF (is_initialized(),
                    std::logic_error,
@@ -160,11 +160,11 @@ namespace snemo {
         const snemo::datamodel::calibrated_data & the_calibrated_data
           = data_record_.get<snemo::datamodel::calibrated_data>(_CD_label_);
         the_calos = &the_calibrated_data.calibrated_calorimeter_hits();
-          // DT_THROW_IF(abort_at_missing_input, std::logic_error,
-          //             "Missing calibrated data to be processed !");
-          // // leave the data unchanged.
-          // return dpp::base_module::PROCESS_ERROR;
-        }
+        // DT_THROW_IF(abort_at_missing_input, std::logic_error,
+        //             "Missing calibrated data to be processed !");
+        // // leave the data unchanged.
+        // return dpp::base_module::PROCESS_ERROR;
+      }
 
       /*********************************
        * Check particle track data     *

@@ -1,5 +1,8 @@
 // Ourselves:
 #include "gamma_tracking.h"
+// This project
+#include "event.h"
+#include "tof_computing.h"
 
 // Standard library:
 #include <algorithm>
@@ -8,8 +11,10 @@
 // Third party:
 // - GSL:
 #include <gsl/gsl_cdf.h>
+// - Boost:
+#include <boost/fusion/iterator/next.hpp>
 // - Bayeux/datatools:
-#include <datatools/logger.h>
+#include <datatools/properties.h>
 
 namespace gt {
 
@@ -410,6 +415,27 @@ namespace gt {
       _min_chi2_[freedom_] = gsl_cdf_chisq_Qinv(_min_prob_,freedom_);
     }
     return _min_chi2_[freedom_];
+  }
+
+  void gamma_tracking::prepare_process(const event & event_)
+  {
+    const event::calorimeter_collection_type & the_gamma_calos = event_.get_calorimeters();
+    for (event::calorimeter_collection_type::const_iterator
+           icalo = the_gamma_calos.begin(); icalo != the_gamma_calos.end(); ++icalo) {
+      for (event::calorimeter_collection_type::const_iterator
+             jcalo = boost::next(icalo); jcalo != the_gamma_calos.end(); ++jcalo) {
+        event::calorimeter_collection_type::const_iterator it1
+          = icalo->second < jcalo->second ? icalo : jcalo;
+        event::calorimeter_collection_type::const_iterator it2
+          = icalo->second < jcalo->second ? jcalo : icalo;
+        const double tof_chi2 = tof_computing::get_chi2(it1->second, it2->second);
+        const double tof_prob = tof_computing::get_internal_probability(tof_chi2);
+        DT_LOG_DEBUG(get_logging_priority(), "X²(" << it1->first << "->"
+                     << it2->first << ") = " << tof_chi2 << ", P = " << tof_prob);
+        add_prob(it1->first, it2->first, tof_prob);
+      }
+    }
+    return;
   }
 
   void gamma_tracking::process()

@@ -82,7 +82,6 @@ int main()
     std::cout << "Event #" << i_evt << std::endl;
     std::cout << a_event << std::endl;
 
-
     // Gamma tracking
     gt::gamma_tracking gt;
 

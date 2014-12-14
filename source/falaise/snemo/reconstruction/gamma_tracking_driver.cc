@@ -4,8 +4,6 @@
 #include <snemo/reconstruction/gamma_tracking_driver.h>
 
 // Third party:
-// - Boost:
-#include <boost/fusion/iterator/next.hpp>
 // - Bayeux/geomtools:
 #include <geomtools/manager.h>
 
@@ -106,15 +104,14 @@ namespace snemo {
     // Initialize the gamma tracker through configuration properties
     void gamma_tracking_driver::initialize(const datatools::properties & setup_)
     {
-      // DT_THROW_IF (is_initialized(), std::logic_error, "Driver '" << get_id() << "' is already initialized !");
-      DT_THROW_IF (is_initialized(), std::logic_error, "Driver 'GammaTracking' is already initialized !");
+      DT_THROW_IF(is_initialized(), std::logic_error, "Driver '" << gamma_tracking_id() << "' is already initialized !");
 
       DT_THROW_IF(! has_geometry_manager(), std::logic_error, "Missing geometry manager !");
       DT_THROW_IF(! get_geometry_manager().is_initialized(), std::logic_error,
                   "Geometry manager is not initialized !");
 
       // Logging priority
-      datatools::logger::priority lp = datatools::logger::extract_logging_configuration (setup_);
+      datatools::logger::priority lp = datatools::logger::extract_logging_configuration(setup_);
       DT_THROW_IF(lp == datatools::logger::PRIO_UNDEFINED, std::logic_error,
                   "Invalid logging priority level for geometry manager !");
       set_logging_priority(lp);
@@ -144,6 +141,9 @@ namespace snemo {
                   std::logic_error,
                   "Found no locator plugin named '" << locator_plugin_name << "'");
       _locator_plugin_ = &geo_mgr.get_plugin<snemo::geometry::locator_plugin>(locator_plugin_name);
+
+      // Extract the setup of the gamma tracking algo :
+      setup_.export_and_rename_starting_with(_gt_setup_, "gt.", "");
 
       set_initialized(true);
       return;
@@ -205,24 +205,10 @@ namespace snemo {
       }
 
       gt::gamma_tracking gt;
-      for (gt::event::calorimeter_collection_type::const_iterator
-             icalo = the_gamma_calos.begin(); icalo != the_gamma_calos.end(); ++icalo) {
-        for (gt::event::calorimeter_collection_type::const_iterator
-               jcalo = boost::next(icalo); jcalo != the_gamma_calos.end(); ++jcalo) {
-          gt::event::calorimeter_collection_type::const_iterator it1
-            = icalo->second < jcalo->second ? icalo : jcalo;
-          gt::event::calorimeter_collection_type::const_iterator it2
-            = icalo->second < jcalo->second ? jcalo : icalo;
-          const double tof_chi2 = gt::tof_computing::get_chi2(it1->second, it2->second);
-          const double tof_prob = gt::tof_computing::get_internal_probability(tof_chi2);
-          DT_LOG_DEBUG(get_logging_priority(), "X²(" << it1->first << "->"
-                       << it2->first << ") = " << tof_chi2 << ", P = " << tof_prob);
-          gt.add_prob(it1->first, it2->first, tof_prob);
-        }
-      }
+      gt.initialize(_gt_setup_);
+      gt.prepare_process(an_event);
       gt.process();
 
-      // To be changed by returning list by reference
       gt::gamma_tracking::solution_type gamma_tracks;
       gt.get_reflects(1e-5, gamma_tracks);
       DT_LOG_DEBUG(get_logging_priority(), "Number of gammas = " << gamma_tracks.size());
@@ -395,7 +381,7 @@ namespace snemo {
         }
       }
 
-      // build a vertex
+      DT_LOG_TRACE(get_logging_priority(), "Exiting.");
       return 0;
     }  // end of namespace reconstruction
 
@@ -407,7 +393,7 @@ DOCD_CLASS_IMPLEMENT_LOAD_BEGIN(snemo::reconstruction::gamma_tracking_driver, oc
 {
   ocd_.set_class_name("snemo::reconstruction::gamma_tracking_driver");
   ocd_.set_class_description("A driver class for the Gamma_Tracking algorithm");
-  ocd_.set_class_library("Falaise_Gamma_Tracking");
+  ocd_.set_class_library("Falaise_GammaTracking");
   ocd_.set_class_documentation("The driver manager for the Gamma Tracking algorithms\n"
                                "/todo What does the manager do ?"
                                );
