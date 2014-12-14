@@ -208,9 +208,11 @@ namespace snemo {
       gt.process();
 
       gt::gamma_tracking::solution_type gamma_tracks;
-      gt.get_reflects(1e-5, gamma_tracks);
-      DT_LOG_DEBUG(get_logging_priority(), "Number of gammas = " << gamma_tracks.size());
-      gt.print();
+      gt.get_reflects(gamma_tracks);
+      if (get_logging_priority() >= datatools::logger::PRIO_DEBUG) {
+        DT_LOG_DEBUG(get_logging_priority(), "Number of gammas = " << gamma_tracks.size());
+        gt.print();
+      }
 
       for (gt::gamma_tracking::solution_type::const_iterator
              it = gamma_tracks.begin(); it != gamma_tracks.end(); ++it) {

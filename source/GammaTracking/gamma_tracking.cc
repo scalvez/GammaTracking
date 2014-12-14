@@ -105,8 +105,8 @@ namespace gt {
       _max_ = config_.fetch_integer("max");
     }
 
-    if (config_.has_key("min_prob")) {
-      _min_prob_ = config_.fetch_integer("min_prob");
+    if (config_.has_key("minimal_probability")) {
+      _min_prob_ = config_.fetch_real("minimal_probability");
     }
 
     set_initialized(true);
@@ -141,7 +141,7 @@ namespace gt {
     ++_max_;
   }
 
-  void gamma_tracking::add_prob(int number1_, int number2_, double proba_)
+  void gamma_tracking::add_probability(int number1_, int number2_, double proba_)
   {
     add(number1_);
     add(number2_);
@@ -174,7 +174,7 @@ namespace gt {
     }
 
     const double proba = gsl_cdf_chisq_Q(chi2_, 1);
-    add_prob(number1_, number2_, proba);
+    add_probability(number1_, number2_, proba);
   }
 
   void gamma_tracking::add_start(int number_)
@@ -194,16 +194,25 @@ namespace gt {
     return;
   }
 
-  void gamma_tracking::print()
+  void gamma_tracking::print(std::ostream & out_) const
   {
-    // list<list<int> >::iterator l_it=_serie_.begin ();
-    // while ( _serie_.end () != l_it){
-    //   cout << "for list ";
-    //   for (list<int>::iterator it=(*l_it).begin (); it!= (*l_it).end (); it++)
-    //     cout << (*it) << ' ';
-    //   cout << "proba is " << _proba_[&(*l_it)] <<endl;
-    //   l_it++;
-    // }
+    for (solution_type::const_iterator it = _serie_.begin();
+         it != _serie_.end(); ++it) {
+      if (boost::next(it) == _serie_.end()) {
+        out_ << "`- ";
+      } else {
+        out_ << "|- ";
+      }
+      out_ << "for list ";
+      for (list_type::const_iterator iit = it->begin(); iit != it->end(); ++iit) {
+        out_ << *iit;
+        if (boost::next(iit) != it->end()) {
+          out_ << "->";
+        }
+      }
+      out_ << " - probability is " << _proba_.at(&(*it)) << std::endl;
+    }
+    return;
   }
 
   bool gamma_tracking::is_inside_serie(const list_type & list_) const
@@ -273,7 +282,7 @@ namespace gt {
     return _extern_;
   }
 
-  void gamma_tracking::set_prob_min(double min_prob_)
+  void gamma_tracking::set_probability_min(double min_prob_)
   {
     _min_prob_ = min_prob_;
     for(std::map<int,double>::iterator it = _min_chi2_.begin();
@@ -282,8 +291,8 @@ namespace gt {
     }
   }
 
-  void gamma_tracking::get_reflects(double prob_,
-                                    solution_type & solution_,
+  void gamma_tracking::get_reflects(solution_type & solution_,
+                                    double prob_list_,
                                     const list_type *starts_,
                                     const list_type *exclude_,
                                     bool deathless_starts_)
@@ -308,7 +317,7 @@ namespace gt {
       DT_LOG_TRACE(get_logging_priority(), "Max number of PM = " << _max_);
       if (a_list.size() > _max_ - to_exclude.size()
           || is_inside(a_list, to_exclude)
-          || prob_ > _proba_[&a_list])
+          || prob_list_ > _proba_[&a_list])
         continue;
 
       if (starts.empty() || is_inside(starts, *(a_list.begin()))) {
@@ -343,7 +352,7 @@ namespace gt {
     return _serie_;
   }
 
-  double gamma_tracking::get_prob(const list_type & scin_ids_) const
+  double gamma_tracking::get_probability(const list_type & scin_ids_) const
   {
     double probability;
     datatools::invalidate(probability);
@@ -354,12 +363,12 @@ namespace gt {
     return probability;
   }
 
-  double gamma_tracking::get_prob(int scin_id1_, int scin_id2_) const
+  double gamma_tracking::get_probability(int scin_id1_, int scin_id2_) const
   {
     list_type l1;
     l1.push_back(scin_id1_);
     l1.push_back(scin_id2_);
-    return get_prob(l1);
+    return get_probability(l1);
   }
 
   double gamma_tracking::get_chi2(const list_type & scin_ids_) const
@@ -437,7 +446,7 @@ namespace gt {
         const double tof_prob = tof_computing::get_internal_probability(tof_chi2);
         DT_LOG_DEBUG(get_logging_priority(), "X²(" << it1->first << "->"
                      << it2->first << ") = " << tof_chi2 << ", P = " << tof_prob);
-        add_prob(it1->first, it2->first, tof_prob);
+        add_probability(it1->first, it2->first, tof_prob);
       }
     }
     return;
@@ -445,7 +454,6 @@ namespace gt {
 
   void gamma_tracking::process()
   {
-    DT_LOG_TRACE(get_logging_priority(), "Serie size = " << _serie_.size());
     bool has_next = false;
     size_t first_loop = 1;
     list_type tamp_list;
@@ -510,9 +518,8 @@ namespace gt {
       }
     }
 
-    DT_LOG_TRACE(get_logging_priority(), "Number of gammas (before sort) = " << _serie_.size());
+    DT_LOG_TRACE(get_logging_priority(), "Number of gammas = " << _serie_.size());
     _serie_.sort(sort_reflect);
-    DT_LOG_TRACE(get_logging_priority(), "Number of gammas (after sort) = " << _serie_.size());
   }
 
   void gamma_tracking::reset()

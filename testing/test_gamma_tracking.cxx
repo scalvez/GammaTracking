@@ -84,27 +84,11 @@ int main()
 
     // Gamma tracking
     gt::gamma_tracking gt;
-
-    gt::event::calorimeter_collection_type & the_calos = a_event.grab_calorimeters();
-    for (auto icalo = the_calos.cbegin(); icalo != the_calos.cend(); ++icalo) {
-      for (auto jcalo = std::next(icalo); jcalo != the_calos.cend(); ++jcalo) {
-        gt::event::calorimeter_collection_type::const_iterator it1
-          = icalo->second < jcalo->second ? icalo : jcalo;
-        gt::event::calorimeter_collection_type::const_iterator it2
-          = icalo->second < jcalo->second ? jcalo : icalo;
-        const double tof_chi2 = gt::tof_computing::get_chi2(it1->second, it2->second);
-        const double tof_prob = gt::tof_computing::get_internal_probability(tof_chi2);
-        std::clog << "X²(" << it1->first << "->" << it2->first << ") = " << tof_chi2 << std::endl;
-        std::clog << "P(" << it1->first << "->" << it2->first << ")  = " << tof_prob << std::endl;
-        gt.add_prob(it1->first, it2->first, tof_prob);
-      }
-    }
-
+    gt.prepare_process(a_event);
     // gt.set_absolute(true);
-    // Replace Combine par process
     gt.process();
     gt::gamma_tracking::solution_type gamma_tracked_coll;
-    gt.get_reflects(1e-5, gamma_tracked_coll);
+    gt.get_reflects(gamma_tracked_coll);
     gt.print();
     // gt.count();
     std::cout << "Number of gammas found = " << gamma_tracked_coll.size() << std::endl;

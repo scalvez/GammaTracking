@@ -87,7 +87,7 @@ namespace gt {
     void add(int number1_);
 
     /// Add 2 ref number combinaison with a proba in [0,1]
-    void add_prob(int number1_, int number2_, double proba_);
+    void add_probability(int number1_, int number2_, double proba_);
 
     /// Add 2 ref number combinaison with a proba in [0,inf]
     void add_chi2(int number1_, int number2_, double chi2_);
@@ -96,9 +96,6 @@ namespace gt {
     /*!< It impose starts during combinaison. Faster calculations,
       but less reliable than postarts. \sa gamma_tracking::get_reflects*/
     void add_start(int number_);
-
-    /// cout information about current gamma tracking (old)
-    void print();
 
     /// Check if an element of gamma_tracking::list_type values_ is in serie collection type
     bool is_inside_serie(const list_type & values_) const;
@@ -128,9 +125,11 @@ namespace gt {
     bool is_extern();
 
     /// Set the minimal probability to continue next combinaisons
-    void set_prob_min(double min_prob_);
+    void set_probability_min(double min_prob_);
 
     /*!<
+      \param prob_list_ is the probability for a list of gammas below which
+      gamma cluster is excluded
       \param starts_ is the post start list_type. After calculation, the function
       will return only gamma tracked starting with starts_.
       \param exclude_ is the list_type to exclude from the calculations, and so, from the final result.
@@ -149,7 +148,8 @@ namespace gt {
 
     */
     /// Return the results
-    void get_reflects(double prob_, solution_type & solution_,
+    void get_reflects(solution_type & solution_,
+                      double prob_list_ = -1.0,
                       const list_type * starts_ = 0,
                       const list_type * exclude_ = 0,
                       bool deathless_starts_ = false);
@@ -158,10 +158,10 @@ namespace gt {
     const solution_type & get_all() const;
 
     /// Get the proba for a gamma tracked
-    double get_prob(const list_type & scin_ids_) const;
+    double get_probability(const list_type & scin_ids_) const;
 
     /// Get the proba between two ref
-    double get_prob(int scin_id1_, int scin_id2_) const;
+    double get_probability(int scin_id1_, int scin_id2_) const;
 
     /// Get the chi square for a gamma tracked
     double get_chi2(const list_type & scin_ids_) const;
@@ -192,11 +192,9 @@ namespace gt {
     /// Reset the gamma tracking
     void reset() ;
 
-    /* /\* interface i_serializable *\/ */
-    /* virtual const std::string & get_serial_tag () const{}     */
-    /* /\* interface i_clear *\/ */
-    /* virtual void clear (){} */
-    /* /\* interface i_tree_dumpable *\/ */
+    /// cout information about current gamma tracking (old)
+    void print(std::ostream & out_ = std::clog) const;
+
     /* virtual void tree_dump (std::ostream & out_         = std::clog,  */
     /* 			const std::string & title_  = "", */
     /* 			const std::string & indent_ = "", */
