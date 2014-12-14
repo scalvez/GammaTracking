@@ -300,8 +300,7 @@ namespace gt {
       starts = *starts_;
     put_inside(_starts_, starts);
     DT_LOG_TRACE(get_logging_priority(), "_starts_.size() = " << _starts_.size());
-
-    sort_prob(_serie_);
+    sort_probabilities();
 
     for (solution_type::const_iterator rit = _serie_.begin();
          rit != _serie_.end(); ++rit) {
@@ -389,23 +388,23 @@ namespace gt {
     return true;
   }
 
-  void gamma_tracking::sort_prob(solution_type & solution_)
+  void gamma_tracking::sort_probabilities()
   {
-    if (solution_.size() <= 1)
+    if (_serie_.size() <= 1)
       return;
 
     bool has_changed = true;
     while (has_changed) {
       has_changed = false;
-      solution_type::iterator it1 = solution_.begin();
-      solution_type::iterator it2 = solution_.begin();
+      solution_type::iterator it1 = _serie_.begin();
+      solution_type::iterator it2 = _serie_.begin();
       it2++;
       while (it2 != solution_.end() && !has_changed) {
         if (it1->size() > 1 && it2->size() > 1 &&
             _proba_[&(*it1)] < _proba_[&(*it2)] &&
             (is_absolute() || it1->size() <= it2->size())) {
           has_changed = true;
-          solution_.splice(it1, solution_, it2);
+          _serie_.splice(it1, _serie_, it2);
         } else {
           it1++;
           it2++;
@@ -417,7 +416,7 @@ namespace gt {
 
   double gamma_tracking::get_chi_limit(unsigned int freedom_)
   {
-    if (!(_min_chi2_.count(freedom_))) {
+    if (! _min_chi2_.count(freedom_)) {
       _min_chi2_[freedom_] = gsl_cdf_chisq_Qinv(_min_prob_,freedom_);
     }
     return _min_chi2_[freedom_];
@@ -446,6 +445,7 @@ namespace gt {
 
   void gamma_tracking::process()
   {
+    DT_LOG_TRACE(get_logging_priority(), "Serie size = " << _serie_.size());
     bool has_next = false;
     size_t first_loop = 1;
     list_type tamp_list;

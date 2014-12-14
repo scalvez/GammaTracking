@@ -173,7 +173,7 @@ namespace gt {
     static bool sort_reflect(const list_type & ref1_, const list_type & ref2_);
 
     /// Classify a 2D list_type in order of size and proba. Depend on _absolute_
-    void sort_prob(solution_type & solution_);
+    void sort_probabilities();
 
     /// Get the chi square limit of _min_prob_ depend on degree of freedom
     double get_chi_limit(unsigned int);
