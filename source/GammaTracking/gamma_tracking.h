@@ -137,7 +137,7 @@ namespace gt {
       \param deathless_starts_ means that the starts can be used in all gt.
       Usefull if starts represents vertexes instead of PM numbers.
 
-      \attribute gamma_tracking::_extern_ allow only gamma tracked with starts, no elswhere\n
+      \attribute gamma_tracking::_extern_ allow only gamma tracked with starts, no elsewhere\n
       gamma_tracking::_starts_ will be merged with starts_, and will be taken in care with extern and other
 
       \return The combinaison of gamma tracked. Each ref will be taken once
@@ -192,9 +192,6 @@ namespace gt {
     /// Reset the gamma tracking
     void reset() ;
 
-    /// Tool to calculate each factorial only once
-    static unsigned long factorial(size_t x);
-
     /* /\* interface i_serializable *\/ */
     /* virtual const std::string & get_serial_tag () const{}     */
     /* /\* interface i_clear *\/ */
@@ -243,11 +240,6 @@ namespace gt {
 
     /// Dictionnary of probabilities based on gamma tracked pointer
     std::map<const list_type* ,double> _proba_;
-
-    /// Factorial kept
-    static std::map<unsigned long, double> _fact_;
-
-
 
   private:
     /*! What is saved in the file :

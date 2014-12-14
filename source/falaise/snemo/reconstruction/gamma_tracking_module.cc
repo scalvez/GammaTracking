@@ -97,9 +97,8 @@ namespace snemo {
       }
 
       // Gamma tracking algorithm :
-      DT_THROW_IF(!setup_.has_key("gamma_tracking"), std::logic_error,
-                  "Missing 'gamma_tracking' algorithm");
-      const std::string algorithm_id = setup_.fetch_string("gamma_tracking");
+      DT_THROW_IF(!setup_.has_key("driver"), std::logic_error, "Missing 'driver' algorithm");
+      const std::string algorithm_id = setup_.fetch_string("driver");
       if (algorithm_id == "GT") {
         _driver_.reset(new snemo::reconstruction::gamma_tracking_driver);
       } else {

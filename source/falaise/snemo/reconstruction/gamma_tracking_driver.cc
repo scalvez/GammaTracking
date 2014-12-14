@@ -4,8 +4,10 @@
 #include <snemo/reconstruction/gamma_tracking_driver.h>
 
 // Third party:
+// - GSL:
+#include <gsl/gsl_cdf.h>
 // - Bayeux/geomtools:
-#include <geomtools/manager.h>
+#include <bayeux/geomtools/manager.h>
 
 // This project:
 #include <falaise/snemo/datamodels/particle_track.h>
@@ -18,13 +20,10 @@
 #include <falaise/snemo/datamodels/line_trajectory_pattern.h>
 #include <falaise/snemo/datamodels/helix_trajectory_pattern.h>
 
-
 // Gamma_Tracking library
 #include <GammaTracking/event.h>
 #include <GammaTracking/tof_computing.h>
 #include <GammaTracking/gamma_tracking.h>
-
-#include <gsl/gsl_cdf.h>
 
 namespace snemo {
 
@@ -173,7 +172,6 @@ namespace snemo {
           gt::event::calorimeter_hit dummy_hit;
           the_gamma_calos.insert(std::make_pair(count,dummy_hit));
         }
-
         gt::event::calorimeter_hit & new_calo_hit = the_gamma_calos[count];
 
         const geomtools::geom_id & a_gid = a_calo_hit.get_geom_id();

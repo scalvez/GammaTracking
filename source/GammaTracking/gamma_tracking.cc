@@ -21,19 +21,21 @@ namespace gt {
   gamma_tracking::gamma_tracking()
   {
     _set_defaults();
+    _initialized_ = false;
     return;
   }
 
   gamma_tracking::gamma_tracking(const gamma_tracking & gt_)
   {
-    _absolute_ = gt_._absolute_;
-    _extern_   = gt_._extern_;
-    _max_      = gt_._max_;
-    _min_prob_ = gt_._min_prob_;
-    _starts_   = gt_._starts_;
-    _serie_    = gt_._serie_;
-    _min_chi2_ = gt_._min_chi2_;
-    _fact_     = gt_._fact_;
+    _initialized_      = gt_._initialized_;
+    _logging_priority_ = gt_._logging_priority_;
+    _absolute_         = gt_._absolute_;
+    _extern_           = gt_._extern_;
+    _max_              = gt_._max_;
+    _min_prob_         = gt_._min_prob_;
+    _starts_           = gt_._starts_;
+    _serie_            = gt_._serie_;
+    _min_chi2_         = gt_._min_chi2_;
 
     for (std::map<const list_type*,double>::const_iterator mit = gt_._chi2_.begin();
 	 mit != gt_._chi2_.end(); ++mit) {
@@ -113,7 +115,6 @@ namespace gt {
 
   void gamma_tracking::_set_defaults()
   {
-    _initialized_ = false;
     _logging_priority_ = datatools::logger::PRIO_WARNING;
     _max_ = 0;
     _min_prob_ = 1e-5;
@@ -133,12 +134,11 @@ namespace gt {
     list_type tamp;
     tamp.push_back(number_);
 
-    if (is_inside_serie(tamp)) {
-      _serie_.push_back(tamp);
-      _proba_[&(_serie_.back())] = 1.0;
-      _chi2_[&(_serie_.back())] = 0.0;
-      ++_max_;
-    }
+    if (is_inside_serie(tamp)) return;
+    _serie_.push_back(tamp);
+    _proba_[&(_serie_.back())] = 1.0;
+    _chi2_[&(_serie_.back())] = 0.0;
+    ++_max_;
   }
 
   void gamma_tracking::add_prob(int number1_, int number2_, double proba_)
@@ -187,7 +187,7 @@ namespace gt {
 
     if (!its_inside) {
       DT_LOG_WARNING(get_logging_priority(),
-                     "Calorimeter " << number_ << " is not in the collection. You should add it before");
+                     "Calorimeter " << number_ << " is not in the collection. You should add it before.");
       return;
     }
     _starts_.push_back(number_);
@@ -208,7 +208,7 @@ namespace gt {
 
   bool gamma_tracking::is_inside_serie(const list_type & list_) const
   {
-    if (std::find(_serie_.begin(), _serie_.end(), list_) == _serie_.end()) {
+    if (std::find(_serie_.begin(), _serie_.end(), list_) != _serie_.end()) {
       return true;
     }
     return false;
@@ -216,16 +216,19 @@ namespace gt {
 
   bool gamma_tracking::is_inside(const list_type & check_, int value_) const
   {
-    if (std::find(check_.begin(), check_.end(), value_) != check_.end())
+    if (std::find(check_.begin(), check_.end(), value_) != check_.end()) {
       return true;
+    }
     return false;
   }
 
   bool gamma_tracking::is_inside(const list_type & check_, const list_type & values_) const
   {
-    for (list_type::const_iterator it = values_.begin(); it != values_.end(); ++it)
-      if (std::find(check_.begin(), check_.end(), (*it)) != check_.end())
+    for (list_type::const_iterator it = values_.begin(); it != values_.end(); ++it) {
+      if (std::find(check_.begin(), check_.end(), (*it)) != check_.end()) {
         return true;
+      }
+    }
     return false;
   }
 
@@ -296,34 +299,37 @@ namespace gt {
     if (starts_)
       starts = *starts_;
     put_inside(_starts_, starts);
+    DT_LOG_TRACE(get_logging_priority(), "_starts_.size() = " << _starts_.size());
 
     sort_prob(_serie_);
 
     for (solution_type::const_iterator rit = _serie_.begin();
          rit != _serie_.end(); ++rit) {
       const list_type & a_list = *rit;
+      DT_LOG_TRACE(get_logging_priority(), "Max number of PM = " << _max_);
       if (a_list.size() > _max_ - to_exclude.size()
           || is_inside(a_list, to_exclude)
           || prob_ > _proba_[&a_list])
         continue;
 
-      if (! starts.size() || is_inside(starts, *(a_list.begin()))) {
-        if (_extern_
-            && (!is_inside(starts, a_list.front ()) ||
+      if (starts.empty() || is_inside(starts, *(a_list.begin()))) {
+        if (is_extern()
+            && (!is_inside(starts, a_list.front()) ||
                 (a_list.size() == 2 && is_inside(starts, a_list.back()))))
           continue;
 
+        DT_LOG_TRACE(get_logging_priority(), "Push new list !");
         to_return.push_back(a_list);
 
-        if (starts.size() && deathless_starts_) {
+        if (! starts.empty() && deathless_starts_) {
           list_type serie = a_list;
           serie.pop_front();
           put_inside(serie, to_exclude);
         } else {
-          put_inside ((*rit), to_exclude);
+          put_inside(a_list, to_exclude);
         }
       } else {
-        if (!_extern_) {
+        if (! is_extern()) {
           put_inside(a_list, to_exclude);
           if (starts.size() && deathless_starts_)
             extract(to_exclude, starts);
@@ -342,7 +348,7 @@ namespace gt {
   {
     double probability;
     datatools::invalidate(probability);
-    const solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
+    solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       probability = _proba_.at(&(*it));
     }
@@ -361,7 +367,7 @@ namespace gt {
   {
     double chi2;
     datatools::invalidate(chi2);
-    const solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
+    solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       chi2 = _chi2_.at(&(*it));
     }
@@ -395,9 +401,9 @@ namespace gt {
       solution_type::iterator it2 = solution_.begin();
       it2++;
       while (it2 != solution_.end() && !has_changed) {
-        if (it1->size() > 1 && it2->size()>1 &&
+        if (it1->size() > 1 && it2->size() > 1 &&
             _proba_[&(*it1)] < _proba_[&(*it2)] &&
-            (_absolute_ || it1->size() <= it2->size())) {
+            (is_absolute() || it1->size() <= it2->size())) {
           has_changed = true;
           solution_.splice(it1, solution_, it2);
         } else {
@@ -441,7 +447,8 @@ namespace gt {
   void gamma_tracking::process()
   {
     bool has_next = false;
-    unsigned int first_loop = 1;
+    size_t first_loop = 1;
+    list_type tamp_list;
 
     solution_type::iterator l_it1 = _serie_.begin();
     while (l_it1 != _serie_.end()) {
@@ -455,10 +462,9 @@ namespace gt {
           {
             bool starts_in = false;
 
-            if (_extern_) {
+            if (is_extern()) {
               for (list_type::iterator it = _starts_.begin();
-                   it != _starts_.end();
-                   it++) {
+                   it != _starts_.end(); ++it) {
                 if (std::find (++(l_it1->begin()), l_it1->end(), *it) != l_it1->end()) {
                   starts_in = true;
                   break;
@@ -475,10 +481,13 @@ namespace gt {
 
             const int freedom = l_it1->size() + l_it2->size() - 2;
             const double chi2 = _chi2_[&(*l_it1)] + _chi2_[&(*l_it2)];
+            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it1) << "] = " << _chi2_[&(*l_it1)]);
+            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it2) << "] = " << _chi2_[&(*l_it2)]);
+            DT_LOG_TRACE(get_logging_priority(), "X² = " << chi2);
             if (chi2 < get_chi_limit(freedom)) {
               const double the_prob = gsl_cdf_chisq_Q(chi2, freedom);
 
-              list_type tamp_list = (*l_it1);
+              tamp_list = (*l_it1);
               tamp_list.insert(tamp_list.end(), ++(l_it2->begin()), l_it2->end());
               if (is_inside_serie(tamp_list)) {
                 has_next = true;
@@ -501,7 +510,9 @@ namespace gt {
       }
     }
 
+    DT_LOG_TRACE(get_logging_priority(), "Number of gammas (before sort) = " << _serie_.size());
     _serie_.sort(sort_reflect);
+    DT_LOG_TRACE(get_logging_priority(), "Number of gammas (after sort) = " << _serie_.size());
   }
 
   void gamma_tracking::reset()
@@ -512,15 +523,4 @@ namespace gt {
     return;
   }
 
-  std::map<unsigned long, double> gamma_tracking::_fact_;
-  unsigned long gamma_tracking::factorial(size_t x)
-  {
-    if (!_fact_.count(x)) {
-      unsigned long fac = 1;
-      for (size_t i = 2; i <= x; i++)
-        fac *= i;
-      _fact_[x] = fac;
-    }
-    return _fact_[x];
-  }
 }

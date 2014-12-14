@@ -37,6 +37,7 @@ namespace gt {
     out_ << "    |- sigma_energy = " << hit_.sigma_energy << std::endl;
     out_ << "    |- time         = " << hit_.time << std::endl;
     out_ << "    `- sigma_time   = " << hit_.sigma_time << std::endl;
+    return out_;
   }
 
   std::ostream & operator<<(std::ostream & out_, const event & event_)
