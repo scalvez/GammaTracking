@@ -107,7 +107,7 @@ namespace snemo {
 
       /// Main tracking method
       virtual int _process_algo(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
-                                snemo::datamodel::particle_track_data & track_);
+                                snemo::datamodel::particle_track_data & ptd_);
 
     private:
 
