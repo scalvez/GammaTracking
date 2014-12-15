@@ -30,13 +30,14 @@ namespace gt {
 
   std::ostream & operator<<(std::ostream & out_, const event::calorimeter_hit & hit_)
   {
-    out_ << "  `- Calorimeter " << hit_.label << std::endl;
+    out_ << "  `- Calorimeter '" << hit_.label << "'" << std::endl;
     out_ << "    |- (x,y,z)      = (" << hit_.position.x() << ","
          << hit_.position.y() << "," << hit_.position.z() << ")" << std::endl;
     out_ << "    |- energy       = " << hit_.energy << std::endl;
     out_ << "    |- sigma_energy = " << hit_.sigma_energy << std::endl;
     out_ << "    |- time         = " << hit_.time << std::endl;
     out_ << "    `- sigma_time   = " << hit_.sigma_time << std::endl;
+    return out_;
   }
 
   std::ostream & operator<<(std::ostream & out_, const event & event_)

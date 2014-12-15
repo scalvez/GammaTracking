@@ -1,7 +1,7 @@
 
 # - List of test programs:
 set(FalaiseGammaTrackingPlugin_TESTS
- # test_gamma_tracking.cxx
+  test_gamma_tracking.cxx
   )
 
 # Use C++11

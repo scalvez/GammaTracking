@@ -62,8 +62,8 @@ namespace snemo {
 
     // Initialization :
     void gamma_tracking_module::initialize(const datatools::properties  & setup_,
-                                                     datatools::service_manager   & service_manager_,
-                                                     dpp::module_handle_dict_type & /* module_dict_ */)
+                                           datatools::service_manager   & service_manager_,
+                                           dpp::module_handle_dict_type & /* module_dict_ */)
     {
       DT_THROW_IF (is_initialized(),
                    std::logic_error,
@@ -97,9 +97,8 @@ namespace snemo {
       }
 
       // Gamma tracking algorithm :
-      DT_THROW_IF(!setup_.has_key("gamma_tracking"), std::logic_error,
-                  "Missing 'gamma_tracking' algorithm");
-      const std::string algorithm_id = setup_.fetch_string("gamma_tracking");
+      DT_THROW_IF(!setup_.has_key("driver"), std::logic_error, "Missing 'driver' algorithm");
+      const std::string algorithm_id = setup_.fetch_string("driver");
       if (algorithm_id == "GT") {
         _driver_.reset(new snemo::reconstruction::gamma_tracking_driver);
       } else {
@@ -154,24 +153,21 @@ namespace snemo {
        * Check calibrated data *
        *************************/
 
-      bool abort_at_missing_input = true;
       // Check if some 'calibrated_data' are available in the data model:
       if (data_record_.has(_CD_label_)) {
         // Get the 'calibrated_data' entry from the data model :
         const snemo::datamodel::calibrated_data & the_calibrated_data
           = data_record_.get<snemo::datamodel::calibrated_data>(_CD_label_);
         the_calos = &the_calibrated_data.calibrated_calorimeter_hits();
-          // DT_THROW_IF(abort_at_missing_input, std::logic_error,
-          //             "Missing calibrated data to be processed !");
-          // // leave the data unchanged.
-          // return dpp::base_module::PROCESS_ERROR;
-        }
+        // DT_THROW_IF(abort_at_missing_input, std::logic_error,
+        //             "Missing calibrated data to be processed !");
+        // // leave the data unchanged.
+        // return dpp::base_module::PROCESS_ERROR;
+      }
 
       /*********************************
        * Check particle track data     *
        *********************************/
-      const bool abort_at_former_output = false;
-      const bool preserve_former_output = false;
       snemo::datamodel::particle_track_data * ptr_particle_track_data = 0;
       if (! data_record_.has(_PTD_label_)) {
         ptr_particle_track_data

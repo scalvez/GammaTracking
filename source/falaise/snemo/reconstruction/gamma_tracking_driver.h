@@ -43,15 +43,13 @@
 
 // - Bayeux/datatools:
 #include <datatools/logger.h>
+#include <datatools/properties.h>
 
 // This project:
 #include <falaise/snemo/datamodels/calibrated_calorimeter_hit.h>
 
 namespace geomtools {
   class manager;
-}
-namespace datatools {
-  class properties;
 }
 
 namespace snemo {
@@ -124,7 +122,7 @@ namespace snemo {
       datatools::logger::priority _logging_priority_;           //!< Logging priority
       const geomtools::manager * _geometry_manager_;            //!< The SuperNEMO geometry manager
       const snemo::geometry::locator_plugin * _locator_plugin_; //!< The SuperNEMO locator plugin
-
+      datatools::properties _gt_setup_;                         //!< The Gamma Tracking parameters
       // for members
     };
 

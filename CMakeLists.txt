@@ -13,9 +13,6 @@ include_directories(${Bayeux_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/source)
 
-# Use C++11
-set(CMAKE_CXX_FLAGS "-std=c++11")
-
 ############################################################################################
 # - GammaTracking library:
 
