@@ -114,7 +114,8 @@ namespace snemo {
       /// Set default values to class members
       void _set_defaults_();
 
-      // compute something ?
+      /// Mesaure source foil vertex by using a charged particle
+      void _measure_source_vertices_(snemo::datamodel::particle_track_data & ptd_);
 
     private:
 
