@@ -105,17 +105,25 @@ namespace snemo {
       /// Reset the clusterizer
       virtual void reset();
 
+      /// Main tracker trajectory driver
+      int process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                  snemo::datamodel::particle_track_data & ptd_);
+
+    protected:
+
+      /// Set default values to class members
+      void _set_defaults();
+
+      /// Prepare cluster for processing
+      virtual int _prepare_process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                                   snemo::datamodel::particle_track_data & ptd_);
+
       /// Main tracking method
       virtual int _process_algo(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
                                 snemo::datamodel::particle_track_data & ptd_);
 
-    private:
-
-      /// Set default values to class members
-      void _set_defaults_();
-
-      /// Mesaure source foil vertex by using a charged particle
-      void _measure_source_vertices_(snemo::datamodel::particle_track_data & ptd_);
+      /// Post-processing operation
+      virtual int _post_process(snemo::datamodel::particle_track_data & ptd_);
 
     private:
 
