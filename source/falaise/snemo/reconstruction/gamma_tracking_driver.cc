@@ -331,15 +331,17 @@ namespace snemo {
              ++igamma) {
           snemo::datamodel::particle_track & a_gamma = igamma->grab();
 
-          if (! a_gamma.has_vertices()) {
+          // snemo::datamodel::particle_track::vertex_collection_type & vertices = a_gamma.grab_vertices();
+          snemo::datamodel::particle_track::vertex_collection_type vertices;
+          a_gamma.fetch_vertices(vertices,
+                                 snemo::datamodel::particle_track::VERTEX_ON_MAIN_CALORIMETER  |
+                                 snemo::datamodel::particle_track::VERTEX_ON_X_CALORIMETER     |
+                                 snemo::datamodel::particle_track::VERTEX_ON_GAMMA_VETO);
+          if (vertices.empty()) {
             DT_LOG_DEBUG(get_logging_priority(), "Gamma track has no vertices associated !");
             continue;
           }
-          snemo::datamodel::particle_track::vertex_collection_type vertices;
-          a_particle.fetch_vertices(vertices,
-                                    snemo::datamodel::particle_track::VERTEX_ON_MAIN_CALORIMETER |
-                                    snemo::datamodel::particle_track::VERTEX_ON_X_CALORIMETER    |
-                                    snemo::datamodel::particle_track::VERTEX_ON_GAMMA_VETO);
+
           for (snemo::datamodel::particle_track::vertex_collection_type::iterator
                  ivtx = vertices.begin();
                ivtx != vertices.end(); ++ivtx) {

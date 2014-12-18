@@ -93,17 +93,17 @@ namespace gt {
       set_logging_priority(p);
     }
 
-    if (config_.has_flag("absolute")) {
-      _absolute_ = true; //or use method set_absolute ?
+    if (config_.has_flag("use_absolute")) {
+      set_absolute(true);
     }
 
-    if (config_.has_flag("extern")) {
-      _extern_ = true;
+    if (config_.has_flag("use_extern")) {
+      set_extern(true);
     }
 
-    if (config_.has_key("max")) {
-      _max_ = config_.fetch_integer("max");
-    }
+    // if (config_.has_key("maximal_gamma_size")) {
+    //   _max_ = config_.fetch_integer("maximal_gamma_size");
+    // }
 
     if (config_.has_key("minimal_probability")) {
       _min_prob_ = config_.fetch_real("minimal_probability");
