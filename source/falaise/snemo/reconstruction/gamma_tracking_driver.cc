@@ -244,6 +244,7 @@ namespace snemo {
         const gt::gamma_tracking::list_type & a_list = *it;
         snemo::datamodel::particle_track::handle_type hPT(new snemo::datamodel::particle_track);
         ptd_.add_particle(hPT);
+        hPT.grab().set_track_id(ptd_.get_number_of_particles());
         hPT.grab().set_charge(snemo::datamodel::particle_track::neutral);
 
         // List of associated calorimeters
