@@ -274,16 +274,17 @@ namespace snemo {
         } // end of gamma hits
       } // end of gammas
 
-      if (ptd_.has_non_associated_calorimeters()) {
-        ptd_.reset_non_associated_calorimeters();
-      }
-
       DT_LOG_TRACE(get_logging_priority(), "Exiting.");
       return 0;
     }
 
     int gamma_tracking_driver::_post_process(snemo::datamodel::particle_track_data & ptd_)
     {
+      if (ptd_.has_non_associated_calorimeters()) {
+        DT_LOG_DEBUG(get_logging_priority(), "Removing non-associated calorimeters");
+        ptd_.reset_non_associated_calorimeters();
+      }
+
       snemo::datamodel::particle_track_data::particle_collection_type charged_particles;
       ptd_.fetch_particles(charged_particles,
                            snemo::datamodel::particle_track::NEGATIVE |
