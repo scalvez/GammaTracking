@@ -10,14 +10,17 @@ namespace gt {
   {
   public :
 
+    /// Return beta factor
     static double beta(double energy_, double mass_);
 
-    static double get_t_th(double energy_, double mass_, double track_length_);
+    /// Return theoritical time given the distance, energy ans mass of the particle
+    static double get_theoritical_time(double energy_, double mass_, double track_length_);
 
     /// Return distance between two calorimeter hits
     static double get_track_length(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);
 
-    static double get_dt(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);
+    /// Return delta time between two calorimeters hits
+    static double get_delta_time(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);
 
     /// Compute X² value between two calorimeter hits
     static double get_chi2(const event::calorimeter_hit & hit1_, const event::calorimeter_hit & hit2_);

@@ -243,9 +243,9 @@ namespace snemo {
         DT_LOG_TRACE(get_logging_priority(), "Adding a new gamma");
         const gt::gamma_tracking::list_type & a_list = *it;
         snemo::datamodel::particle_track::handle_type hPT(new snemo::datamodel::particle_track);
-        ptd_.add_particle(hPT);
         hPT.grab().set_track_id(ptd_.get_number_of_particles());
         hPT.grab().set_charge(snemo::datamodel::particle_track::neutral);
+        ptd_.add_particle(hPT);
 
         // List of associated calorimeters
         for (gt::gamma_tracking::list_type::const_iterator jt = a_list.begin();
@@ -373,11 +373,11 @@ namespace snemo {
             // Compute theoritical time for the gamma in case it comes from the
             // foil vertex
             const double gamma_track_length = (a_foil_vertex - a_spot.get_position()).mag();
-            const double gamma_time_th = gt::tof_computing::get_t_th(gamma_energy, 0.0, gamma_track_length);
+            const double gamma_time_th = gt::tof_computing::get_theoritical_time(gamma_energy, 0.0, gamma_track_length);
 
             // Assume particle are electron/positron
             const double mass = CLHEP::electron_mass_c2;
-            const double particle_time_th = gt::tof_computing::get_t_th(particle_energy, mass, particle_track_length);
+            const double particle_time_th = gt::tof_computing::get_theoritical_time(particle_energy, mass, particle_track_length);
             const double sigma_particle_time_th = particle_time_th * std::pow(mass, 2)
               /(particle_energy*(particle_energy+mass)*(particle_energy+2*mass))*particle_sigma_energy;
 
