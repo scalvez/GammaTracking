@@ -5,12 +5,10 @@
 
 namespace gt {
 
+  /// \brief Basic class to host Time-Of-Flight related functions
   class tof_computing
   {
-
   public :
-    //   static const double kC=30;    //!< speed of light in cm.ns-1
-    //   static const double kMe=511;   //!< electron mass in keV
 
     static double beta(double energy_, double mass_);
 

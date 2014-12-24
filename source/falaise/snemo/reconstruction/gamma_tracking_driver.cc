@@ -235,7 +235,7 @@ namespace snemo {
       gt.get_reflects(gamma_tracks);
       if (get_logging_priority() >= datatools::logger::PRIO_DEBUG) {
         DT_LOG_DEBUG(get_logging_priority(), "Number of gammas = " << gamma_tracks.size());
-        gt.print();
+        gt.dump();
       }
 
       for (gt::gamma_tracking::solution_type::const_iterator

@@ -174,7 +174,6 @@ namespace gt {
       DT_LOG_TRACE(get_logging_priority(), "X² value below minimal value (" << chi2_ << "<" << get_chi_limit(1));
       return;
     }
-
     const double proba = gsl_cdf_chisq_Q(chi2_, 1);
     add_probability(number1_, number2_, proba);
   }
@@ -196,7 +195,7 @@ namespace gt {
     return;
   }
 
-  void gamma_tracking::print(std::ostream & out_) const
+  void gamma_tracking::dump(std::ostream & out_) const
   {
     for (solution_type::const_iterator it = _serie_.begin();
          it != _serie_.end(); ++it) {
@@ -356,8 +355,7 @@ namespace gt {
 
   double gamma_tracking::get_probability(const list_type & scin_ids_) const
   {
-    double probability;
-    datatools::invalidate(probability);
+    double probability = datatools::invalid_real();
     solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       probability = _proba_.at(&(*it));
@@ -375,8 +373,7 @@ namespace gt {
 
   double gamma_tracking::get_chi2(const list_type & scin_ids_) const
   {
-    double chi2;
-    datatools::invalidate(chi2);
+    double chi2 = datatools::invalid_real();
     solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       chi2 = _chi2_.at(&(*it));
@@ -473,47 +470,46 @@ namespace gt {
              && l_it1->size() > first_loop
              && l_it1->back() == l_it2->front()
              && !(is_inside(*l_it1, l_it2->back()))
-             && (!_starts_.size() || is_inside(_starts_, (*(l_it1->begin())))))
-          {
-            bool starts_in = false;
+             && (!_starts_.size() || is_inside(_starts_, (*(l_it1->begin()))))) {
+          bool starts_in = false;
 
-            if (is_extern()) {
-              for (list_type::iterator it = _starts_.begin();
-                   it != _starts_.end(); ++it) {
-                if (std::find(++(l_it1->begin()), l_it1->end(), *it) != l_it1->end()) {
-                  starts_in = true;
-                  break;
-                }
-
-                if (l_it2->back() == *it) {
-                  starts_in = true;
-                  break;
-                }
-              }
-            }
-
-            if (starts_in) continue;
-
-            const int freedom = l_it1->size() + l_it2->size() - 2;
-            const double chi2 = _chi2_[&(*l_it1)] + _chi2_[&(*l_it2)];
-            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it1) << "] = " << _chi2_[&(*l_it1)]);
-            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it2) << "] = " << _chi2_[&(*l_it2)]);
-            DT_LOG_TRACE(get_logging_priority(), "X² = " << chi2);
-            if (chi2 < get_chi_limit(freedom)) {
-              const double the_prob = gsl_cdf_chisq_Q(chi2, freedom);
-
-              tamp_list = (*l_it1);
-              tamp_list.insert(tamp_list.end(), ++(l_it2->begin()), l_it2->end());
-              if (! is_inside_serie(tamp_list)) {
-                has_next = true;
-                _serie_.push_front (tamp_list);
+          if (is_extern()) {
+            for (list_type::iterator it = _starts_.begin();
+                 it != _starts_.end(); ++it) {
+              if (std::find(++(l_it1->begin()), l_it1->end(), *it) != l_it1->end()) {
+                starts_in = true;
+                break;
               }
 
-              tamp_list.clear();
-              _proba_[&(_serie_.front())] = the_prob; //_proba_[&(*l_it1)]*_proba_[&(*l_it2)];
-              _chi2_[&(_serie_.front())] = chi2;
+              if (l_it2->back() == *it) {
+                starts_in = true;
+                break;
+              }
             }
           }
+
+          if (starts_in) continue;
+
+          const int freedom = l_it1->size() + l_it2->size() - 2;
+          const double chi2 = _chi2_[&(*l_it1)] + _chi2_[&(*l_it2)];
+          DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it1) << "] = " << _chi2_[&(*l_it1)]);
+          DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it2) << "] = " << _chi2_[&(*l_it2)]);
+          DT_LOG_TRACE(get_logging_priority(), "X² = " << chi2);
+          if (chi2 < get_chi_limit(freedom)) {
+            const double the_prob = gsl_cdf_chisq_Q(chi2, freedom);
+
+            tamp_list = (*l_it1);
+            tamp_list.insert(tamp_list.end(), ++(l_it2->begin()), l_it2->end());
+            if (! is_inside_serie(tamp_list)) {
+              has_next = true;
+              _serie_.push_front (tamp_list);
+            }
+
+            tamp_list.clear();
+            _proba_[&(_serie_.front())] = the_prob; //_proba_[&(*l_it1)]*_proba_[&(*l_it2)];
+            _chi2_[&(_serie_.front())] = chi2;
+          }
+        }
       }
 
       l_it1++;

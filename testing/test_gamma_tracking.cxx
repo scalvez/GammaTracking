@@ -89,7 +89,7 @@ int main()
     gt.process();
     gt::gamma_tracking::solution_type gamma_tracked_coll;
     gt.get_reflects(gamma_tracked_coll);
-    gt.print();
+    gt.dump();
     // gt.count();
     std::cout << "Number of gammas found = " << gamma_tracked_coll.size() << std::endl;
     for (auto icol : gamma_tracked_coll) {
