@@ -17,7 +17,7 @@ namespace gt {
     return std::sqrt(energy_ * (energy_ + 2.*mass_)) / (energy_ + mass_);
   }
 
-  double tof_computing::get_t_th(double energy_, double mass_, double track_length_)
+  double tof_computing::get_theoritical_time(double energy_, double mass_, double track_length_)
   {
     return track_length_ / (tof_computing::beta(energy_, mass_) * CLHEP::c_light);
   }
@@ -28,22 +28,22 @@ namespace gt {
     return (hit1_.position - hit2_.position).mag();
   }
 
-  double tof_computing::get_dt(const event::calorimeter_hit & hit1_,
-                               const event::calorimeter_hit & hit2_)
+  double tof_computing::get_delta_time(const event::calorimeter_hit & hit1_,
+                                       const event::calorimeter_hit & hit2_)
   {
     const double track_length = tof_computing::get_track_length(hit1_, hit2_);
     const double t1 = hit1_.time;
     const double t2 = hit2_.time;
-    const double t_th = tof_computing::get_t_th(hit1_.energy, 0, track_length);
+    const double th_time = tof_computing::get_theoritical_time(hit1_.energy, 0, track_length);
     //the mass being 0, it just gets t=l/c (since beta=1)
-    return std::abs(t1 - t2) - t_th;
+    return std::abs(t1 - t2) - th_time;
   }
 
   double tof_computing::get_chi2(const event::calorimeter_hit & hit1_,
                                  const event::calorimeter_hit & hit2_)
   {
     const double sigma_exp = pow(hit1_.sigma_time,2) + pow(hit2_.sigma_time,2);
-    return pow(tof_computing::get_dt(hit1_, hit2_),2)/sigma_exp;
+    return pow(tof_computing::get_delta_time(hit1_, hit2_),2)/sigma_exp;
   }
 
   double tof_computing::get_internal_probability(double chi2_, size_t ndf_)

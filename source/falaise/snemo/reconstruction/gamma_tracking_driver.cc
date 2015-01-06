@@ -4,8 +4,6 @@
 #include <snemo/reconstruction/gamma_tracking_driver.h>
 
 // Third party:
-// - GSL:
-#include <gsl/gsl_cdf.h>
 // - Bayeux/geomtools:
 #include <bayeux/geomtools/manager.h>
 
@@ -78,16 +76,11 @@ namespace snemo {
       return _geometry_manager_ != 0;
     }
 
-    void gamma_tracking_driver::_set_defaults_()
-    {
-      _initialized_ = false;
-      return;
-    }
-
     // Constructor
     gamma_tracking_driver::gamma_tracking_driver()
     {
-      _set_defaults_();
+      _set_defaults();
+      set_initialized(false);
       return;
     }
 
@@ -151,28 +144,59 @@ namespace snemo {
     // Reset the gamma tracker
     void gamma_tracking_driver::reset()
     {
-      _set_defaults_();
+      _set_defaults();
+      set_initialized(false);
       return;
+    }
+
+    int gamma_tracking_driver::process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                                       snemo::datamodel::particle_track_data & ptd_)
+    {
+      int status = 0;
+      DT_THROW_IF(! is_initialized(), std::logic_error, "Driver '" << gamma_tracking_id() << "' is already initialized !");
+
+      status = _process_algo(hits_, ptd_);
+      if (status != 0) {
+        DT_LOG_ERROR(get_logging_priority(),
+                     "Processing of calorimeter hits by '" << gamma_tracking_id() << "' algorithm has failed !");
+        return status;
+      }
+
+      _post_process(ptd_);
+      return status;
+    }
+
+    void gamma_tracking_driver::_set_defaults()
+    {
+      _logging_priority_ = datatools::logger::PRIO_WARNING;
+      _geometry_manager_ = 0;
+      _locator_plugin_ = 0;
+      return;
+    }
+
+    int gamma_tracking_driver::_prepare_process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & /*hits_*/,
+                                                snemo::datamodel::particle_track_data & /*ptd_*/)
+    {
+      return 0;
     }
 
     // Main tracking method
     int gamma_tracking_driver::_process_algo(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
-                                             snemo::datamodel::particle_track_data & track_)
+                                             snemo::datamodel::particle_track_data & ptd_)
     {
       DT_LOG_TRACE(get_logging_priority(), "Entering...");
 
       gt::event an_event;
       gt::event::calorimeter_collection_type & the_gamma_calos = an_event.grab_calorimeters();
 
-      size_t count = 0;
       for (snemo::datamodel::calibrated_calorimeter_hit::collection_type::const_iterator
-             icalo = hits_.begin(); icalo != hits_.end(); ++icalo, ++count) {
+             icalo = hits_.begin(); icalo != hits_.end(); ++icalo) {
         const snemo::datamodel::calibrated_calorimeter_hit & a_calo_hit = icalo->get();
         {
           gt::event::calorimeter_hit dummy_hit;
-          the_gamma_calos.insert(std::make_pair(count,dummy_hit));
+          the_gamma_calos.insert(std::make_pair(a_calo_hit.get_hit_id(), dummy_hit));
         }
-        gt::event::calorimeter_hit & new_calo_hit = the_gamma_calos[count];
+        gt::event::calorimeter_hit & new_calo_hit = the_gamma_calos[a_calo_hit.get_hit_id()];
 
         const geomtools::geom_id & a_gid = a_calo_hit.get_geom_id();
         const snemo::geometry::calo_locator & calo_locator   = _locator_plugin_->get_calo_locator();
@@ -202,197 +226,200 @@ namespace snemo {
         DT_LOG_DEBUG(get_logging_priority(), "Event dump: " << an_event);
       }
 
+      // Running gamma tracking
       gt::gamma_tracking gt;
       gt.initialize(_gt_setup_);
       gt.prepare_process(an_event);
       gt.process();
-
       gt::gamma_tracking::solution_type gamma_tracks;
       gt.get_reflects(gamma_tracks);
       if (get_logging_priority() >= datatools::logger::PRIO_DEBUG) {
         DT_LOG_DEBUG(get_logging_priority(), "Number of gammas = " << gamma_tracks.size());
-        gt.print();
+        gt.dump();
       }
 
       for (gt::gamma_tracking::solution_type::const_iterator
              it = gamma_tracks.begin(); it != gamma_tracks.end(); ++it) {
-        const gt::gamma_tracking::list_type & tmp_list = *it;
-        //to change -> it_2 = it.begin() ?
+        DT_LOG_TRACE(get_logging_priority(), "Adding a new gamma");
+        const gt::gamma_tracking::list_type & a_list = *it;
         snemo::datamodel::particle_track::handle_type hPT(new snemo::datamodel::particle_track);
-        track_.add_particle(hPT);
+        hPT.grab().set_track_id(ptd_.get_number_of_particles());
         hPT.grab().set_charge(snemo::datamodel::particle_track::neutral);
+        ptd_.add_particle(hPT);
 
-        for (gt::gamma_tracking::list_type::const_iterator jt = tmp_list.begin();
-             jt != tmp_list.end(); ++jt) {
-          if (jt == tmp_list.begin()) {
-            double particle_time = -1;
-            double particle_sigma_time = -1;
-            double track_length = -1;
-            double particle_energy=-1;
-            double particle_sigma_energy=-1;
-            double particle_x_vertex=-1;
-            double particle_y_vertex=-1;
-            double particle_z_vertex=-1;
+        // List of associated calorimeters
+        for (gt::gamma_tracking::list_type::const_iterator jt = a_list.begin();
+             jt != a_list.end(); ++jt) {
+          const int calo_id = *jt;
+          // Set calorimeter association
+          geomtools::base_hit::has_hit_id_predicate hit_pred(calo_id);
+          datatools::mother_to_daughter_predicate<geomtools::base_hit,
+                                                  snemo::datamodel::calibrated_calorimeter_hit> pred_M2D(hit_pred);
+          datatools::handle_predicate<snemo::datamodel::calibrated_calorimeter_hit> pred_via_handle(pred_M2D);
+          snemo::datamodel::calibrated_calorimeter_hit::collection_type::const_iterator
+            found = std::find_if(hits_.begin(), hits_.end(), pred_via_handle);
+          DT_THROW_IF(found == hits_.end(), std::logic_error,
+                      "Calibrated calorimeter hit with id " << calo_id << " can not be found");
+          hPT.grab().grab_associated_calorimeter_hits().push_back(*found);
 
-            const snemo::datamodel::particle_track_data::particle_collection_type &
-              the_particles = track_.get_particles();
-
-            for (snemo::datamodel::particle_track_data::particle_collection_type::const_iterator
-                   iparticle = the_particles.begin();
-                 iparticle != the_particles.end();
-                 ++iparticle) {
-
-              const snemo::datamodel::particle_track & a_particle = iparticle->get();
-
-              if (! a_particle.has_associated_calorimeter_hits()) {
-                DT_LOG_DEBUG(get_logging_priority(),
-                             "Particle track is not associated to any calorimeter block !");
-                continue;
-              }
-
-              const snemo::datamodel::calibrated_calorimeter_hit::collection_type &
-                the_calorimeters = a_particle.get_associated_calorimeter_hits ();
-
-              if (the_calorimeters.size() > 1) {
-                DT_LOG_DEBUG(get_logging_priority(),
-                             "The particle is associated to more than 1 calorimeter !");
-                continue;
-              }
-
-              if (a_particle.get_charge() == snemo::datamodel::particle_track::negative ||
-                  a_particle.get_charge() == snemo::datamodel::particle_track::positive ||
-                  a_particle.get_charge() == snemo::datamodel::particle_track::undefined) {
-
-                // Look first if trajectory pattern is an helix or not
-                const snemo::datamodel::tracker_trajectory & a_trajectory = a_particle.get_trajectory();
-                const snemo::datamodel::base_trajectory_pattern & a_track_pattern = a_trajectory.get_pattern();
-                const std::string & a_pattern_id = a_track_pattern.get_pattern_id();
-
-                particle_time = the_calorimeters.at(0).get().get_time();
-                particle_sigma_time = the_calorimeters.at(0).get().get_sigma_time();
-
-                DT_THROW_IF(particle_time < 0, std::logic_error,
-                            "The associated calorimeter time is negative !");
-
-                DT_THROW_IF(particle_sigma_time < 0, std::logic_error,
-                            "The associated calorimeter sigma time is negative !");
-
-                particle_energy = the_calorimeters.at(0).get().get_energy();
-                particle_sigma_energy = the_calorimeters.at(0).get().get_sigma_energy();
-
-
-                DT_THROW_IF(particle_energy < 0, std::logic_error,
-                            "The associated calorimeter energy is negative !");
-                DT_THROW_IF(particle_sigma_energy < 0, std::logic_error,
-                            "The associated calorimeter sigma energy is negative !");
-
-                if (a_pattern_id == snemo::datamodel::line_trajectory_pattern::pattern_id()) {
-                  const snemo::datamodel::line_trajectory_pattern * ptr_line
-                    = dynamic_cast<const snemo::datamodel::line_trajectory_pattern *>(&a_track_pattern);
-                  const geomtools::line_3d & a_line = ptr_line->get_segment();
-                  track_length = a_line.get_length();
-                } else if (a_pattern_id == snemo::datamodel::helix_trajectory_pattern::pattern_id()) {
-                  const snemo::datamodel::helix_trajectory_pattern * ptr_helix
-                    = dynamic_cast<const snemo::datamodel::helix_trajectory_pattern *>(&a_track_pattern);
-                  const geomtools::helix_3d & a_helix = ptr_helix->get_helix();
-                  track_length = a_helix.get_length();
-                }
-
-                const snemo::datamodel::particle_track::vertex_collection_type & the_vertices = a_particle.get_vertices();
-                geomtools::vector_3d particle_source_vertex_position;
-                geomtools::invalidate(particle_source_vertex_position);
-
-                for (snemo::datamodel::particle_track::vertex_collection_type::const_iterator
-                       ivertex = the_vertices.begin();
-                     ivertex != the_vertices.end(); ++ivertex) {
-                  const geomtools::blur_spot & a_vertex = ivertex->get();
-                  const datatools::properties & aux = a_vertex.get_auxiliaries();
-
-                  if(!snemo::datamodel::particle_track::vertex_is_on_source_foil(a_vertex)) {
-                    DT_LOG_DEBUG(get_logging_priority(),
-                                 "Vertex " << a_vertex.get_position()
-                                 << " is not on the source foil !");
-                    continue;
-                  } else {
-                    DT_LOG_WARNING(get_logging_priority(),
-                                   "Possible vertex on foil !");
-                    particle_source_vertex_position = a_vertex.get_position();
-
-                    DT_THROW_IF(!geomtools::is_valid (particle_source_vertex_position), std::logic_error,
-                                "Vertex position on source not valid !");
-
-                    particle_x_vertex = particle_source_vertex_position.x();
-                    particle_y_vertex = particle_source_vertex_position.y();
-                    particle_z_vertex = particle_source_vertex_position.z();
-                    break;
-                  }
-                }
-              }
-
-              double t_g = the_gamma_calos.at(*jt).time;
-              double sigma_t_g = the_gamma_calos.at(*jt).sigma_time;
-              double E_g = the_gamma_calos.at(*jt).energy;
-              // double sigma_E_g = the_gamma_calos.at(*jt).sigma_energy;
-
-              double gamma_track_length = sqrt(pow(particle_x_vertex-the_gamma_calos.at(*jt).position.x(),2) +
-                                               pow(particle_y_vertex-the_gamma_calos.at(*jt).position.y(),2) +
-                                               pow(particle_z_vertex-the_gamma_calos.at(*jt).position.z(),2));
-
-              double t_g_th=gt::tof_computing::get_t_th(E_g,0.0,gamma_track_length);
-              double t_e_th=gt::tof_computing::get_t_th(particle_energy,0.511,track_length);
-
-              double sigma_particle_t_th = t_e_th*0.511*0.511/(particle_energy*(particle_energy+0.511)*(particle_energy+2*0.511))*particle_sigma_energy;
-
-              double dt_int = particle_time-t_g-(t_e_th-t_g_th);
-
-              double chi2_int = dt_int*dt_int/(particle_sigma_time*particle_sigma_time + sigma_t_g*sigma_t_g + sigma_particle_t_th*sigma_particle_t_th);
-              double P_int =gsl_cdf_chisq_Q(chi2_int, 1);
-
-
-              if (P_int>0.04) {
-                DT_LOG_WARNING(get_logging_priority(),
-                               "******Proba int : "<<P_int<<" -> Adding foil vertex !");
-
-                snemo::datamodel::particle_track::handle_spot hBSv(new geomtools::blur_spot);
-                hPT.grab().grab_vertices().push_back(hBSv);
-                geomtools::blur_spot & spot_v = hBSv.grab();
-                spot_v.set_hit_id(0);
-                spot_v.grab_auxiliaries().store(snemo::datamodel::particle_track::vertex_type_key(),
-                                                snemo::datamodel::particle_track::vertex_on_source_foil_label());
-                spot_v.set_blur_dimension(geomtools::blur_spot::dimension_three);
-
-                geomtools::vector_3d vertex_position (particle_x_vertex,particle_y_vertex,particle_z_vertex);
-
-                spot_v.set_position(vertex_position);
-
-              }
-
-            }
-          } //end if first calo from gamma
-
+          // Build vertex
           snemo::datamodel::particle_track::handle_spot hBS(new geomtools::blur_spot);
           hPT.grab().grab_vertices().push_back(hBS);
           geomtools::blur_spot & spot = hBS.grab();
-          spot.set_hit_id(*jt);
+          spot.set_hit_id(calo_id);
+          spot.set_geom_id(found->get().get_geom_id());
           spot.grab_auxiliaries().store(snemo::datamodel::particle_track::vertex_type_key(),
-                                        the_gamma_calos.at(*jt).label);
+                                        the_gamma_calos.at(calo_id).label);
           spot.set_blur_dimension(geomtools::blur_spot::dimension_three);
-          spot.set_position(the_gamma_calos.at(*jt).position);
-        }
-      }
+          spot.set_position(the_gamma_calos.at(calo_id).position);
+        } // end of gamma hits
+      } // end of gammas
 
       DT_LOG_TRACE(get_logging_priority(), "Exiting.");
       return 0;
-    }  // end of namespace reconstruction
+    }
 
-  }  // end of namespace snemo
-}
+    int gamma_tracking_driver::_post_process(snemo::datamodel::particle_track_data & ptd_)
+    {
+      if (ptd_.has_non_associated_calorimeters()) {
+        DT_LOG_DEBUG(get_logging_priority(), "Removing non-associated calorimeters");
+        ptd_.reset_non_associated_calorimeters();
+      }
+
+      snemo::datamodel::particle_track_data::particle_collection_type charged_particles;
+      ptd_.fetch_particles(charged_particles,
+                           snemo::datamodel::particle_track::NEGATIVE |
+                           snemo::datamodel::particle_track::POSITIVE |
+                           snemo::datamodel::particle_track::UNDEFINED);
+      if (charged_particles.empty()) {
+        DT_LOG_DEBUG(get_logging_priority(), "No charged particles have been found !");
+        return 0;
+      }
+
+      for (snemo::datamodel::particle_track_data::particle_collection_type::const_iterator
+             iparticle = charged_particles.begin();
+           iparticle != charged_particles.end();
+           ++iparticle) {
+        const snemo::datamodel::particle_track & a_particle = iparticle->get();
+
+        if (! a_particle.has_associated_calorimeter_hits()) continue;
+        const snemo::datamodel::calibrated_calorimeter_hit::collection_type &
+          the_calorimeters = a_particle.get_associated_calorimeter_hits();
+        // Only take care of the first associated calorimeter
+        const snemo::datamodel::calibrated_calorimeter_hit & a_calo_hit = the_calorimeters.front().get();
+        const double particle_time         = a_calo_hit.get_time();
+        const double particle_sigma_time   = a_calo_hit.get_sigma_time();
+        const double particle_energy       = a_calo_hit.get_energy();
+        const double particle_sigma_energy = a_calo_hit.get_sigma_energy();
+
+        // Get track length
+        const snemo::datamodel::base_trajectory_pattern & a_track_pattern
+          = a_particle.get_trajectory().get_pattern();
+        const geomtools::i_shape_1d & a_shape = a_track_pattern.get_shape();
+        const double particle_track_length = a_shape.get_length();
+        DT_LOG_DEBUG(get_logging_priority(), "Track length = " << particle_track_length / CLHEP::mm << " mm");
+
+        snemo::datamodel::particle_track::vertex_collection_type vertices;
+        a_particle.fetch_vertices(vertices, snemo::datamodel::particle_track::VERTEX_ON_SOURCE_FOIL);
+        if (vertices.empty()) continue;
+        const geomtools::vector_3d & a_foil_vertex = vertices.front().get().get_position();
+
+        // Given charged particle then process gammas
+        snemo::datamodel::particle_track_data::particle_collection_type gamma_particles;
+        ptd_.fetch_particles(gamma_particles, snemo::datamodel::particle_track::NEUTRAL);
+        for (snemo::datamodel::particle_track_data::particle_collection_type::iterator
+               igamma = gamma_particles.begin();
+             igamma != gamma_particles.end();
+             ++igamma) {
+          snemo::datamodel::particle_track & a_gamma = igamma->grab();
+
+          // snemo::datamodel::particle_track::vertex_collection_type & vertices = a_gamma.grab_vertices();
+          snemo::datamodel::particle_track::vertex_collection_type vertices;
+          a_gamma.fetch_vertices(vertices,
+                                 snemo::datamodel::particle_track::VERTEX_ON_MAIN_CALORIMETER  |
+                                 snemo::datamodel::particle_track::VERTEX_ON_X_CALORIMETER     |
+                                 snemo::datamodel::particle_track::VERTEX_ON_GAMMA_VETO);
+          if (vertices.empty()) {
+            DT_LOG_DEBUG(get_logging_priority(), "Gamma track has no vertices associated !");
+            continue;
+          }
+
+          for (snemo::datamodel::particle_track::vertex_collection_type::iterator
+                 ivtx = vertices.begin();
+               ivtx != vertices.end(); ++ivtx) {
+            const geomtools::blur_spot & a_spot = ivtx->get();
+            // Get associated calorimeter
+            if (! a_gamma.has_associated_calorimeter_hits()) {
+              DT_LOG_DEBUG(get_logging_priority(), "Gamma track is not associated to any calorimeter block !");
+              continue;
+            }
+            const snemo::datamodel::calibrated_calorimeter_hit::collection_type &
+              hits = a_gamma.get_associated_calorimeter_hits();
+            geomtools::base_hit::has_geom_id_predicate hit_pred(a_spot.get_geom_id());
+            datatools::mother_to_daughter_predicate<geomtools::base_hit,
+                                                    snemo::datamodel::calibrated_calorimeter_hit> pred_M2D(hit_pred);
+            datatools::handle_predicate<snemo::datamodel::calibrated_calorimeter_hit> pred_via_handle(pred_M2D);
+            snemo::datamodel::calibrated_calorimeter_hit::collection_type::const_iterator
+              found = std::find_if(hits.begin(), hits.end(), pred_via_handle);
+            DT_THROW_IF(found == hits.end(), std::logic_error,
+                        "Calibrated calorimeter hit with id " << a_spot.get_geom_id()
+                        << " can not be found");
+            const snemo::datamodel::calibrated_calorimeter_hit & a_calo_hit = found->get();
+            const double gamma_time         = a_calo_hit.get_time();
+            const double gamma_sigma_time   = a_calo_hit.get_sigma_time();
+            const double gamma_energy       = a_calo_hit.get_energy();
+            // const double gamma_sigma_energy = a_calo_hit.get_sigma_energy();
+
+            // Compute theoritical time for the gamma in case it comes from the
+            // foil vertex
+            const double gamma_track_length = (a_foil_vertex - a_spot.get_position()).mag();
+            const double gamma_time_th = gt::tof_computing::get_theoritical_time(gamma_energy, 0.0, gamma_track_length);
+
+            // Assume particle are electron/positron
+            const double mass = CLHEP::electron_mass_c2;
+            const double particle_time_th = gt::tof_computing::get_theoritical_time(particle_energy, mass, particle_track_length);
+            const double sigma_particle_time_th = particle_time_th * std::pow(mass, 2)
+              /(particle_energy*(particle_energy+mass)*(particle_energy+2*mass))*particle_sigma_energy;
+
+            const double dt_int = particle_time - gamma_time - (particle_time_th - gamma_time_th);
+            const double sigma = std::pow(particle_sigma_time, 2)
+              + std::pow(gamma_sigma_time, 2) + std::pow(sigma_particle_time_th, 2);
+            const double chi2_int = std::pow(dt_int, 2)/sigma;
+            const double int_prob = gt::tof_computing::get_internal_probability(chi2_int);
+            const double int_prob_limit = 0.04;
+            if (int_prob > int_prob_limit) {
+              DT_LOG_DEBUG(get_logging_priority(),
+                           "Adding foil vertex (with internal probability = " << int_prob << ")");
+
+              snemo::datamodel::particle_track::handle_spot hBSv(new geomtools::blur_spot);
+              // a_gamma.grab_vertices().push_back(hBSv);
+              a_gamma.grab_vertices().insert(a_gamma.grab_vertices().begin(),hBSv);
+              geomtools::blur_spot & spot_v = hBSv.grab();
+              spot_v.set_hit_id(0);
+              spot_v.grab_auxiliaries().store(snemo::datamodel::particle_track::vertex_type_key(),
+                                              snemo::datamodel::particle_track::vertex_on_source_foil_label());
+              spot_v.set_blur_dimension(geomtools::blur_spot::dimension_three);
+              spot_v.set_position(a_foil_vertex);
+              break;
+            }
+          }
+        }
+
+        // Only take care of one particle (to be improved later)
+        break;
+      }
+      return 0;
+    }
+
+  }  // end of namespace reconstruction
+
+}  // end of namespace snemo
 /* OCD support */
 #include <datatools/object_configuration_description.h>
 DOCD_CLASS_IMPLEMENT_LOAD_BEGIN(snemo::reconstruction::gamma_tracking_driver, ocd_)
 {
   ocd_.set_class_name("snemo::reconstruction::gamma_tracking_driver");
-  ocd_.set_class_description("A driver class for the Gamma_Tracking algorithm");
+  ocd_.set_class_description("A driver class for the Gamma Tracking algorithm");
   ocd_.set_class_library("Falaise_GammaTracking");
   ocd_.set_class_documentation("The driver manager for the Gamma Tracking algorithms\n"
                                "/todo What does the manager do ?"

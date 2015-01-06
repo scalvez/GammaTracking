@@ -53,8 +53,6 @@ namespace gt {
     /// 2D collection of integer, ref for "reference of PM"
     typedef std::list<list_type> solution_type;
 
-  public:
-
     /// Default constructor
     gamma_tracking();
 
@@ -193,7 +191,7 @@ namespace gt {
     void reset() ;
 
     /// cout information about current gamma tracking (old)
-    void print(std::ostream & out_ = std::clog) const;
+    void dump(std::ostream & out_ = std::clog) const;
 
     /* virtual void tree_dump (std::ostream & out_         = std::clog,  */
     /* 			const std::string & title_  = "", */
@@ -206,60 +204,18 @@ namespace gt {
 
   private:
 
-    /// Logging priority threshold
-    datatools::logger::priority _logging_priority_;
+    datatools::logger::priority _logging_priority_; //!< Logging priority threshold
+    bool _initialized_;                             //!< Initialization flag
+    bool _absolute_;                                //!< Prefer probability rather than size of gamma tracked
+    bool _extern_;                                  //!< Impose starts in the gamma tracked, not elsewhere
+    int _max_;                                      //!< Maximum size of a gamma tracked
+    double _min_prob_;                              //!< Minimal probability to continue the combinating
+    list_type _starts_;                             //!< Start collections (pre and post)
+    solution_type _serie_;                          //!< The full gamma tracked combinaisons
+    std::map<int, double> _min_chi2_;               //!< Dictionnary of chi squares : deg of freedom: size-1 VS the chi2
+    std::map<const list_type* ,double> _chi2_;      //!< Dictionnary of chi square based on gamma tracked pointer
+    std::map<const list_type* ,double> _proba_;     //!< Dictionnary of probabilities based on gamma tracked pointer
 
-    /// Initialization flag
-    bool _initialized_;
-
-    /// Prefer probability rather than size of gamma tracked
-    bool _absolute_;
-
-    /// Impose starts in the gamma tracked, not elsewhere
-    bool _extern_;
-
-    /// Maximum size of a gamma tracked
-    int _max_;
-
-    /// minimal probability to continue the combinating
-    double _min_prob_;
-
-    /// start collections (pre and post)
-    list_type _starts_;
-
-    /// The full gamma tracked combinaisons
-    solution_type _serie_;
-
-    /// dictionnary of chi squares : deg of freedom: size-1 VS the chi2
-    std::map<int,double> _min_chi2_;
-
-    /// Dictionnary of chi square based on gamma tracked pointer
-    std::map<const list_type* ,double> _chi2_;
-
-    /// Dictionnary of probabilities based on gamma tracked pointer
-    std::map<const list_type* ,double> _proba_;
-
-  private:
-    /*! What is saved in the file :
-     * \param gamma_tracking::_serie_
-
-     * \param gamma_tracking::_proba_
-
-     * \param gamma_tracking::_max_
-
-     * \param gamma_tracking::_starts_
-
-     * \param gamma_tracking::_chi2_
-
-     * \param gamma_tracking::_absolute_
-
-     * \param gamma_tracking::_extern_
-
-     * \param gamma_tracking::_min_prob_
-
-     * \param gamma_tracking::_min_chi2_
-
-     */
   };
 }
 

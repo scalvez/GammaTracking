@@ -105,16 +105,25 @@ namespace snemo {
       /// Reset the clusterizer
       virtual void reset();
 
-      /// Main tracking method
-      virtual int _process_algo(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
-                                snemo::datamodel::particle_track_data & track_);
+      /// Main tracker trajectory driver
+      int process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                  snemo::datamodel::particle_track_data & ptd_);
 
-    private:
+    protected:
 
       /// Set default values to class members
-      void _set_defaults_();
+      void _set_defaults();
 
-      // compute something ?
+      /// Prepare cluster for processing
+      virtual int _prepare_process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                                   snemo::datamodel::particle_track_data & ptd_);
+
+      /// Main tracking method
+      virtual int _process_algo(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
+                                snemo::datamodel::particle_track_data & ptd_);
+
+      /// Post-processing operation
+      virtual int _post_process(snemo::datamodel::particle_track_data & ptd_);
 
     private:
 

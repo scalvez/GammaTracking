@@ -184,7 +184,7 @@ namespace snemo {
        ********************/
 
       // Sanity check
-      if(! the_calos) {
+      if (! the_calos) {
         DT_LOG_WARNING(get_logging_priority(), "No calorimeter hits to be processed !");
         return dpp::base_module::PROCESS_ERROR;
       }
@@ -201,7 +201,7 @@ namespace snemo {
       DT_LOG_TRACE(get_logging_priority(), "Entering...");
 
       // process the fitter driver :
-      _driver_.get()->_process_algo(hits_, track_data_);
+      _driver_.get()->process(hits_, track_data_);
 
       DT_LOG_TRACE(get_logging_priority(), "Exiting.");
       return;

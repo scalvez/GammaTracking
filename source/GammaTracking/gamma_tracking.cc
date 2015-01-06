@@ -93,17 +93,17 @@ namespace gt {
       set_logging_priority(p);
     }
 
-    if (config_.has_flag("absolute")) {
-      _absolute_ = true; //or use method set_absolute ?
+    if (config_.has_flag("use_absolute")) {
+      set_absolute(true);
     }
 
-    if (config_.has_flag("extern")) {
-      _extern_ = true;
+    if (config_.has_flag("use_extern")) {
+      set_extern(true);
     }
 
-    if (config_.has_key("max")) {
-      _max_ = config_.fetch_integer("max");
-    }
+    // if (config_.has_key("maximal_gamma_size")) {
+    //   _max_ = config_.fetch_integer("maximal_gamma_size");
+    // }
 
     if (config_.has_key("minimal_probability")) {
       _min_prob_ = config_.fetch_real("minimal_probability");
@@ -146,9 +146,11 @@ namespace gt {
     add(number1_);
     add(number2_);
 
+    if (number1_ == number2_) return;
+
     DT_LOG_TRACE(get_logging_priority(),
                  "Probability(" << number1_ << "," << number2_ << ") = " << proba_);
-    if (number1_ == number2_ || proba_ < _min_prob_ ) {
+    if (proba_ < _min_prob_ ) {
       DT_LOG_TRACE(get_logging_priority(),
                    "Probability below threshold (" << proba_ << "<" << _min_prob_ << ")");
       return;
@@ -172,7 +174,6 @@ namespace gt {
       DT_LOG_TRACE(get_logging_priority(), "X² value below minimal value (" << chi2_ << "<" << get_chi_limit(1));
       return;
     }
-
     const double proba = gsl_cdf_chisq_Q(chi2_, 1);
     add_probability(number1_, number2_, proba);
   }
@@ -194,7 +195,7 @@ namespace gt {
     return;
   }
 
-  void gamma_tracking::print(std::ostream & out_) const
+  void gamma_tracking::dump(std::ostream & out_) const
   {
     for (solution_type::const_iterator it = _serie_.begin();
          it != _serie_.end(); ++it) {
@@ -354,8 +355,7 @@ namespace gt {
 
   double gamma_tracking::get_probability(const list_type & scin_ids_) const
   {
-    double probability;
-    datatools::invalidate(probability);
+    double probability = datatools::invalid_real();
     solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       probability = _proba_.at(&(*it));
@@ -373,8 +373,7 @@ namespace gt {
 
   double gamma_tracking::get_chi2(const list_type & scin_ids_) const
   {
-    double chi2;
-    datatools::invalidate(chi2);
+    double chi2 = datatools::invalid_real();
     solution_type::const_iterator it = std::find(_serie_.begin(), _serie_.end(), scin_ids_);
     if (it != _serie_.end()) {
       chi2 = _chi2_.at(&(*it));
@@ -434,19 +433,24 @@ namespace gt {
   void gamma_tracking::prepare_process(const event & event_)
   {
     const event::calorimeter_collection_type & the_gamma_calos = event_.get_calorimeters();
-    for (event::calorimeter_collection_type::const_iterator
-           icalo = the_gamma_calos.begin(); icalo != the_gamma_calos.end(); ++icalo) {
+
+    if (the_gamma_calos.size() == 1) {
+      add(the_gamma_calos.begin()->first);
+    } else {
       for (event::calorimeter_collection_type::const_iterator
-             jcalo = boost::next(icalo); jcalo != the_gamma_calos.end(); ++jcalo) {
-        event::calorimeter_collection_type::const_iterator it1
-          = icalo->second < jcalo->second ? icalo : jcalo;
-        event::calorimeter_collection_type::const_iterator it2
-          = icalo->second < jcalo->second ? jcalo : icalo;
-        const double tof_chi2 = tof_computing::get_chi2(it1->second, it2->second);
-        const double tof_prob = tof_computing::get_internal_probability(tof_chi2);
-        DT_LOG_DEBUG(get_logging_priority(), "X²(" << it1->first << "->"
-                     << it2->first << ") = " << tof_chi2 << ", P = " << tof_prob);
-        add_probability(it1->first, it2->first, tof_prob);
+             icalo = the_gamma_calos.begin(); icalo != the_gamma_calos.end(); ++icalo) {
+        for (event::calorimeter_collection_type::const_iterator
+               jcalo = boost::next(icalo); jcalo != the_gamma_calos.end(); ++jcalo) {
+          event::calorimeter_collection_type::const_iterator it1
+            = icalo->second < jcalo->second ? icalo : jcalo;
+          event::calorimeter_collection_type::const_iterator it2
+            = icalo->second < jcalo->second ? jcalo : icalo;
+          const double tof_chi2 = tof_computing::get_chi2(it1->second, it2->second);
+          const double tof_prob = tof_computing::get_internal_probability(tof_chi2);
+          DT_LOG_DEBUG(get_logging_priority(), "X²(" << it1->first << "->"
+                       << it2->first << ") = " << tof_chi2 << ", P = " << tof_prob);
+          add_probability(it1->first, it2->first, tof_prob);
+        }
       }
     }
     return;
@@ -466,47 +470,46 @@ namespace gt {
              && l_it1->size() > first_loop
              && l_it1->back() == l_it2->front()
              && !(is_inside(*l_it1, l_it2->back()))
-             && (!_starts_.size() || is_inside(_starts_, (*(l_it1->begin())))))
-          {
-            bool starts_in = false;
+             && (!_starts_.size() || is_inside(_starts_, (*(l_it1->begin()))))) {
+          bool starts_in = false;
 
-            if (is_extern()) {
-              for (list_type::iterator it = _starts_.begin();
-                   it != _starts_.end(); ++it) {
-                if (std::find(++(l_it1->begin()), l_it1->end(), *it) != l_it1->end()) {
-                  starts_in = true;
-                  break;
-                }
-
-                if (l_it2->back() == *it) {
-                  starts_in = true;
-                  break;
-                }
-              }
-            }
-
-            if (starts_in) continue;
-
-            const int freedom = l_it1->size() + l_it2->size() - 2;
-            const double chi2 = _chi2_[&(*l_it1)] + _chi2_[&(*l_it2)];
-            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it1) << "] = " << _chi2_[&(*l_it1)]);
-            DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it2) << "] = " << _chi2_[&(*l_it2)]);
-            DT_LOG_TRACE(get_logging_priority(), "X² = " << chi2);
-            if (chi2 < get_chi_limit(freedom)) {
-              const double the_prob = gsl_cdf_chisq_Q(chi2, freedom);
-
-              tamp_list = (*l_it1);
-              tamp_list.insert(tamp_list.end(), ++(l_it2->begin()), l_it2->end());
-              if (! is_inside_serie(tamp_list)) {
-                has_next = true;
-                _serie_.push_front (tamp_list);
+          if (is_extern()) {
+            for (list_type::iterator it = _starts_.begin();
+                 it != _starts_.end(); ++it) {
+              if (std::find(++(l_it1->begin()), l_it1->end(), *it) != l_it1->end()) {
+                starts_in = true;
+                break;
               }
 
-              tamp_list.clear();
-              _proba_[&(_serie_.front())] = the_prob; //_proba_[&(*l_it1)]*_proba_[&(*l_it2)];
-              _chi2_[&(_serie_.front())] = chi2;
+              if (l_it2->back() == *it) {
+                starts_in = true;
+                break;
+              }
             }
           }
+
+          if (starts_in) continue;
+
+          const int freedom = l_it1->size() + l_it2->size() - 2;
+          const double chi2 = _chi2_[&(*l_it1)] + _chi2_[&(*l_it2)];
+          DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it1) << "] = " << _chi2_[&(*l_it1)]);
+          DT_LOG_TRACE(get_logging_priority(), "X²[" << &(*l_it2) << "] = " << _chi2_[&(*l_it2)]);
+          DT_LOG_TRACE(get_logging_priority(), "X² = " << chi2);
+          if (chi2 < get_chi_limit(freedom)) {
+            const double the_prob = gsl_cdf_chisq_Q(chi2, freedom);
+
+            tamp_list = (*l_it1);
+            tamp_list.insert(tamp_list.end(), ++(l_it2->begin()), l_it2->end());
+            if (! is_inside_serie(tamp_list)) {
+              has_next = true;
+              _serie_.push_front (tamp_list);
+            }
+
+            tamp_list.clear();
+            _proba_[&(_serie_.front())] = the_prob; //_proba_[&(*l_it1)]*_proba_[&(*l_it2)];
+            _chi2_[&(_serie_.front())] = chi2;
+          }
+        }
       }
 
       l_it1++;
