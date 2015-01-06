@@ -184,7 +184,7 @@ namespace snemo {
        ********************/
 
       // Sanity check
-      if(! the_calos) {
+      if (! the_calos) {
         DT_LOG_WARNING(get_logging_priority(), "No calorimeter hits to be processed !");
         return dpp::base_module::PROCESS_ERROR;
       }
