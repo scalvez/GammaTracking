@@ -135,7 +135,7 @@ namespace snemo {
       _locator_plugin_ = &geo_mgr.get_plugin<snemo::geometry::locator_plugin>(locator_plugin_name);
 
       // Extract the setup of the gamma tracking algo :
-      setup_.export_and_rename_starting_with(_gt_setup_, "gt.", "");
+      setup_.export_and_rename_starting_with(_gt_setup_, "GT.", "");
 
       set_initialized(true);
       return;
