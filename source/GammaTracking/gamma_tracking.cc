@@ -195,6 +195,21 @@ namespace gt {
     return;
   }
 
+  void gamma_tracking::compel_start(int number_)
+  {
+    //if is_inside
+    for (solution_type::iterator isequence = _serie_.begin() ;
+         isequence != _serie_.end(); ++isequence)
+      {
+        if(is_inside((*isequence), number_) &&
+           std::find((*isequence).begin(), (*isequence).end(), number_) != (*isequence).begin() /*isequence.front() != number*/)
+          {
+            _proba_[&(*isequence)] = 0;
+            std::cout << std::endl << " CANCELLING LIST FOR WRONG START " << std::endl << std::endl;
+          }
+      }
+  }
+
   void gamma_tracking::dump(std::ostream & out_) const
   {
     for (solution_type::const_iterator it = _serie_.begin();

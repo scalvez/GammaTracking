@@ -95,6 +95,9 @@ namespace gt {
       but less reliable than postarts. \sa gamma_tracking::get_reflects*/
     void add_start(int number_);
 
+    /// Compel the calorimeter to be nowhere else than at the beginning of a gamma
+    void compel_start(int number_);
+
     /// Check if an element of gamma_tracking::list_type values_ is in serie collection type
     bool is_inside_serie(const list_type & values_) const;
 

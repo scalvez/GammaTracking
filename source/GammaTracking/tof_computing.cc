@@ -42,7 +42,8 @@ namespace gt {
   double tof_computing::get_chi2(const event::calorimeter_hit & hit1_,
                                  const event::calorimeter_hit & hit2_)
   {
-    const double sigma_exp = pow(hit1_.sigma_time,2) + pow(hit2_.sigma_time,2);
+    double sigma_l = 120; //mm
+    const double sigma_exp = pow(hit1_.sigma_time,2) + pow(hit2_.sigma_time,2) + pow(sigma_l/100,2);
     return pow(tof_computing::get_delta_time(hit1_, hit2_),2)/sigma_exp;
   }
 
