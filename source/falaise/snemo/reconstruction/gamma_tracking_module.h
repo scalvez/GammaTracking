@@ -88,8 +88,7 @@ namespace snemo {
     protected:
 
       /// Special method to process and generate trajectory data
-      void _process(const snemo::datamodel::calibrated_calorimeter_hit::collection_type & hits_,
-                    snemo::datamodel::particle_track_data & track_data_);
+      void _process(datatools::things & data_);
 
       /// Give default values to specific class members.
       void _set_defaults ();
